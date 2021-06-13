@@ -9,7 +9,14 @@ RUN apt-get update && \
     apt-get update && \
     apt-get upgrade -y && \
     apt-get install -y --no-install-recommends sbt wget sed
+
 WORKDIR /ergoPayoutAuto
+
+RUN wget https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-19.3.1/graalvm-ce-java8-linux-amd64-19.3.1.tar.gz && \
+    tar -xf graalvm-ce-java8-linux-amd64-19.3.1.tar.gz
+ENV JAVA_HOME="/ergoPayoutAuto/graalvm-ce-java8-19.3.1"
+ENV PATH="${JAVA_HOME}/bin:$PATH"
+
 ADD ["./app", "/ergoPayoutAuto/src/app"]
 ADD ["./conf", "/ergoPayoutAuto/src/conf"]
 ADD ["./project", "/ergoPayoutAuto/src/project"]
