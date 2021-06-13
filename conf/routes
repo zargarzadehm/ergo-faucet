@@ -1,0 +1,2 @@
+GET         /payment/address/:address              controllers.Controller.payment(address: String)
+
