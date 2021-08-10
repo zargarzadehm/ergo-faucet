@@ -1,9 +1,9 @@
 package controllers
 
 import akka.actor.ActorSystem
-import dao.PaymentDAO
+import dao._
 import javax.inject._
-import models.Payment
+import models.{Payment, TokenPayment}
 import play.api.Logger
 import play.api.mvc._
 import utils.Util._
@@ -12,7 +12,7 @@ import utils.{Conf, CreateReward}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class Controller @Inject()(payments: PaymentDAO, cc: ControllerComponents, actorSystem: ActorSystem, createReward: CreateReward)(implicit exec: ExecutionContext) extends AbstractController(cc) {
+class Controller @Inject()(paymentErgDao: PaymentErgDAO, paymentTokenDao: PaymentTokenDAO, cc: ControllerComponents, actorSystem: ActorSystem, createReward: CreateReward)(implicit exec: ExecutionContext) extends AbstractController(cc) {
 
   private val logger: Logger = Logger(this.getClass)
 
@@ -22,11 +22,11 @@ class Controller @Inject()(payments: PaymentDAO, cc: ControllerComponents, actor
   }
 
   /**
-   * list of proposal related to a specific team
+   * Send erg
    */
-  def payment(address: String): Action[AnyContent] = Action { implicit request =>
+  def ergPayment(address: String): Action[AnyContent] = Action { implicit request =>
     try {
-      if(payments.exists(address)) {
+      if(paymentErgDao.exists(address)) {
       BadRequest(
         s"""{
            |  "message": "This address has already received an ERG."
@@ -34,11 +34,37 @@ class Controller @Inject()(payments: PaymentDAO, cc: ControllerComponents, actor
       ).as("application/json")
       }
       else {
-        val txId = createReward.sendTx(address).replaceAll("\"", "")
-        payments.insert(Payment(address, Conf.defaultAmount, txId))
+        val txId = createReward.sendErg(address).replaceAll("\"", "")
+        paymentErgDao.insert(Payment(address, Conf.defaultAmount, txId))
         Ok(
         s"""{
-           |  "txId": "https://testnet.ergoplatform.com/en/transactions/${txId}"
+           |  "txId": "${Conf.explorerFrontUrl}/en/transactions/${txId}"
+           |}""".stripMargin
+        ).as("application/json")
+      }
+    } catch {
+      case e: Throwable => exception(e)
+    }
+  }
+
+  /**
+   * Send Dex Token
+   */
+  def dexTokenPayment(address: String): Action[AnyContent] = Action { implicit request =>
+    try {
+      if(paymentTokenDao.exists(address, "DEX")) {
+      BadRequest(
+        s"""{
+           |  "message": "This address has already received DEX Tokens."
+           |}""".stripMargin
+      ).as("application/json")
+      }
+      else {
+        val txId = createReward.sendDexToken(address).replaceAll("\"", "")
+        paymentTokenDao.insert(TokenPayment(address, Conf.assets("erg"), "DEX", txId))
+        Ok(
+        s"""{
+           |  "txId": "${Conf.explorerFrontUrl}/en/transactions/${txId}"
            |}""".stripMargin
         ).as("application/json")
       }

@@ -8,10 +8,10 @@ import slick.jdbc.JdbcProfile
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 
-trait PaymentComponent { self: HasDatabaseConfigProvider[JdbcProfile] =>
+trait PaymentErgComponent { self: HasDatabaseConfigProvider[JdbcProfile] =>
   import profile.api._
 
-  class PaymentTable(tag: Tag) extends Table[Payment](tag, "PAYMENT") {
+  class PaymentErgTable(tag: Tag) extends Table[Payment](tag, "PAYMENT") {
     def address = column[String]("ADDRESS")
     def amount = column[Long]("AMOUNT")
     def txid = column[String]("TXID")
@@ -20,13 +20,13 @@ trait PaymentComponent { self: HasDatabaseConfigProvider[JdbcProfile] =>
 }
 
 @Singleton()
-class PaymentDAO @Inject() (protected val dbConfigProvider: DatabaseConfigProvider)(implicit executionContext: ExecutionContext)
-  extends PaymentComponent
+class PaymentErgDAO @Inject() (protected val dbConfigProvider: DatabaseConfigProvider)(implicit executionContext: ExecutionContext)
+  extends PaymentErgComponent
     with HasDatabaseConfigProvider[JdbcProfile] {
 
   import profile.api._
 
-  val payments = TableQuery[PaymentTable]
+  val payments = TableQuery[PaymentErgTable]
 
   /**
    * inserts a Payment into db

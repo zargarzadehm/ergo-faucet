@@ -6,6 +6,8 @@ import com.typesafe.config.ConfigFactory
 import play.api.{Configuration, Logger}
 import java.math.BigInteger
 
+import scala.collection.mutable
+
 object Conf {
   val config: Configuration = Configuration(ConfigFactory.load())
   private val logger: Logger = Logger(this.getClass)
@@ -15,8 +17,12 @@ object Conf {
   lazy val nodeUrl: String = readKey("node.url").replaceAll("/$", "")
   lazy val networkType: NetworkType = if (readKey("node.networkType").toLowerCase.equals("mainnet")) NetworkType.MAINNET else NetworkType.TESTNET
   lazy val addressEncoder = new ErgoAddressEncoder(networkType.networkPrefix)
-  lazy val explorerUrl: String = readKey("explorer.url").replaceAll("/$", "")
-  lazy val defaultAmount: Long = readKey("amount.default", "60000000000L").toLong
+  lazy val explorerUrl: String = readKey("explorer.url-back").replaceAll("/$", "")
+  lazy val explorerFrontUrl: String = readKey("explorer.url-front").replaceAll("/$", "")
+  lazy val defaultAmount: Long = readKey("faucet.default", "60000000000L").toLong
+  val ergAssetsConfig: Configuration = config.get[Configuration]("erg-dex-assets")
+  lazy val assets = mutable.Map.empty[String, Long]
+  ergAssetsConfig.keys.foreach(asset => assets(asset) = ergAssetsConfig.get[Long](asset))
   lazy val defaultTxFee: Long = readKey("fee.default", "1000000L").toLong
 
   def readKey(key: String, default: String = null): String = {

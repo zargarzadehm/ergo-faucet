@@ -14,11 +14,4 @@ object Util {
     e.printStackTrace(pw)
     sw.toString
   }
-
-  /**
-  *
-   * @param sk: Secret
-   * @return Address
-   */
-  def getAddressFromSk(sk: BigInteger) = new Address(JavaHelpers.createP2PKAddress(DLogProverInput(sk).publicImage, Conf.addressEncoder.networkPrefix))
 }

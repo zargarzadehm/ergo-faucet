@@ -1,8 +1,8 @@
 import sbt.Attributed
 
-name := "ergo-payout-auto"
+name := "ergo-faucet"
 
-version := "0.1.0"
+version := "0.2.0"
 
 lazy val `ergoPayoutAuto` = (project in file(".")).enablePlugins(PlayScala)
 
