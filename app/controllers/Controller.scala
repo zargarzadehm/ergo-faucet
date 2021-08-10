@@ -9,7 +9,7 @@ import play.api.mvc._
 import utils.Util._
 import utils.{Conf, CreateReward}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 @Singleton
 class Controller @Inject()(paymentErgDao: PaymentErgDAO, paymentTokenDao: PaymentTokenDAO, cc: ControllerComponents, actorSystem: ActorSystem, createReward: CreateReward)(implicit exec: ExecutionContext) extends AbstractController(cc) {

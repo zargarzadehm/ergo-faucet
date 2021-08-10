@@ -1,10 +1,6 @@
 package utils
 
 import java.io.{PrintWriter, StringWriter}
-import java.math.BigInteger
-
-import org.ergoplatform.appkit.{Address, JavaHelpers}
-import sigmastate.basics.DLogProtocol.DLogProverInput
 
 object Util {
 
@@ -13,5 +9,14 @@ object Util {
     val pw = new PrintWriter(sw)
     e.printStackTrace(pw)
     sw.toString
+  }
+
+  def validateAddress(address: String): Boolean = {
+    try{
+      Conf.addressEncoder.fromString(address).get.script
+      true
+    } catch {
+      case _: Throwable => throw new Exception("Invalid withdraw address")
+    }
   }
 }

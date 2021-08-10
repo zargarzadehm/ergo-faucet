@@ -3,7 +3,7 @@ package utils
 import javax.inject.Inject
 import org.ergoplatform.appkit.impl.ErgoTreeContract
 import org.ergoplatform.appkit.{Address, ErgoToken, InputBox, OutBox}
-
+import Util._
 import scala.collection.JavaConverters._
 import play.api.Logger
 
@@ -12,6 +12,7 @@ import scala.collection.mutable
 class CreateReward @Inject()(networkIObject: NetworkIObject, explorer: Explorer){
   private val logger: Logger = Logger(this.getClass)
   def sendErg(address: String, sendTransaction: Boolean = true): String = {
+    validateAddress(address)
     var txId = ""
     def createProxyBox(proxyBox: (Long, Seq[InputBox], Seq[ErgoToken])): OutBox = {
       networkIObject.getCtxClient(implicit ctx => {
@@ -83,6 +84,7 @@ class CreateReward @Inject()(networkIObject: NetworkIObject, explorer: Explorer)
     txId
   }
   def sendDexToken(address: String, sendTransaction: Boolean = true): String = {
+    validateAddress(address)
     var txId = ""
     def createProxyBox(proxyBox: (Long, Seq[InputBox], Seq[ErgoToken])): OutBox = {
       networkIObject.getCtxClient(implicit ctx => {
