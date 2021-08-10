@@ -9,30 +9,30 @@ RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get install -y --no-install-recommends sbt=1.2.7 wget
 
-WORKDIR /ergoPayoutAuto
+WORKDIR /ergo-faucet
 
 RUN wget https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-19.3.1/graalvm-ce-java8-linux-amd64-19.3.1.tar.gz && \
     tar -xf graalvm-ce-java8-linux-amd64-19.3.1.tar.gz
-ENV JAVA_HOME="/ergoPayoutAuto/graalvm-ce-java8-19.3.1"
+ENV JAVA_HOME="/ergo-faucet/graalvm-ce-java8-19.3.1"
 ENV PATH="${JAVA_HOME}/bin:$PATH"
 
-ADD ["./app", "/ergoPayoutAuto/src/app"]
-ADD ["./conf", "/ergoPayoutAuto/src/conf"]
-ADD ["./project", "/ergoPayoutAuto/src/project"]
-COPY build.sbt /ergoPayoutAuto/src/
+ADD ["./app", "/ergo-faucet/src/app"]
+ADD ["./conf", "/ergo-faucet/src/conf"]
+ADD ["./project", "/ergo-faucet/src/project"]
+COPY build.sbt /ergo-faucet/src/
 
-WORKDIR /ergoPayoutAuto/src/
+WORKDIR /ergo-faucet/src/
 RUN sbt assembly
-RUN mv `find . -name ergo-payout-auto-*.jar` /ergo-payout-auto.jar
-CMD ["java", "-jar", "/ergo-payout-auto.jar"]
+RUN mv `find . -name ergo-faucet-*.jar` /ergo-faucet.jar
+CMD ["java", "-jar", "/ergo-faucet.jar"]
 
 FROM openjdk:8-jre-slim
 RUN adduser --disabled-password --home /home/ergo/ --uid 9052 --gecos "ErgoPlatform" ergo && \
-    install -m 0750 -o ergo -g ergo  -d /home/ergo/ergoPayoutAuto
-COPY --from=builder_code /ergo-payout-auto.jar /home/ergo/ergo-payout-auto.jar
-COPY ./conf/application.conf /home/ergo/ergoPayoutAuto/application.conf
-RUN chown ergo:ergo /home/ergo/ergo-payout-auto.jar
+    install -m 0750 -o ergo -g ergo  -d /home/ergo/ergo-faucet
+COPY --from=builder_code /ergo-faucet.jar /home/ergo/ergo-faucet.jar
+COPY ./conf/application.conf /home/ergo/ergo-faucet/application.conf
+RUN chown ergo:ergo /home/ergo/ergo-faucet.jar
 USER ergo
 EXPOSE 9000
 WORKDIR /home/ergo
-ENTRYPOINT java -jar -D"config.file"=ergoPayoutAuto/application.conf /home/ergo/ergo-payout-auto.jar
+ENTRYPOINT java -jar -D"config.file"=ergo-faucet/application.conf /home/ergo/ergo-faucet.jar
