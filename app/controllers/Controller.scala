@@ -21,38 +21,38 @@ class Controller @Inject()(paymentErgDao: PaymentErgDAO, paymentTokenDao: Paymen
     BadRequest(s"""{"success": false, "message": "${e.getMessage}"}""").as("application/json")
   }
 
-  /**
-   * Send erg
-   */
-  def ergPayment(address: String): Action[AnyContent] = Action { implicit request =>
-    try {
-      if(paymentErgDao.exists(address)) {
-      BadRequest(
-        s"""{
-           |  "message": "This address has already received an ERG."
-           |}""".stripMargin
-      ).as("application/json")
-      }
-      else {
-        val txId = createReward.sendErg(address).replaceAll("\"", "")
-        paymentErgDao.insert(Payment(address, Conf.defaultAmount, txId))
-        Ok(
-        s"""{
-           |  "txId": "${Conf.explorerFrontUrl}/en/transactions/${txId}"
-           |}""".stripMargin
-        ).as("application/json")
-      }
-    } catch {
-      case e: Throwable => exception(e)
-    }
-  }
+//  /**
+//   * Send erg
+//   */
+//  def ergPayment(address: String): Action[AnyContent] = Action { implicit request =>
+//    try {
+//      if(paymentErgDao.exists(address)) {
+//      BadRequest(
+//        s"""{
+//           |  "message": "This address has already received an ERG."
+//           |}""".stripMargin
+//      ).as("application/json")
+//      }
+//      else {
+//        val txId = createReward.sendErg(address).replaceAll("\"", "")
+//        paymentErgDao.insert(Payment(address, Conf.defaultAmount, txId))
+//        Ok(
+//        s"""{
+//           |  "txId": "${Conf.explorerFrontUrl}/en/transactions/${txId}"
+//           |}""".stripMargin
+//        ).as("application/json")
+//      }
+//    } catch {
+//      case e: Throwable => exception(e)
+//    }
+//  }
 
   /**
    * Send Dex Token
    */
   def dexTokenPayment(address: String): Action[AnyContent] = Action { implicit request =>
     try {
-      if(paymentTokenDao.exists(address, "DEX")) {
+      if(false) {
       BadRequest(
         s"""{
            |  "message": "This address has already received DEX Tokens."
@@ -60,8 +60,11 @@ class Controller @Inject()(paymentErgDao: PaymentErgDAO, paymentTokenDao: Paymen
       ).as("application/json")
       }
       else {
-        val txId = createReward.sendDexToken(address).replaceAll("\"", "")
-        paymentTokenDao.insert(TokenPayment(address, Conf.assets("erg"), "DEX", txId))
+        val proxy_info = selectRandomProxyInfo(Conf.proxyInfos)
+        println(proxy_info)
+        val txId = createReward.sendDexToken(address, proxy_info.get, false).replaceAll("\"", "")
+        if(txId.nonEmpty)
+          paymentTokenDao.insert(TokenPayment(address, Conf.assets("erg"), "DEX", txId))
         Ok(
         s"""{
            |  "txId": "${Conf.explorerFrontUrl}/en/transactions/${txId}"

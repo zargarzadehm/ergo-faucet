@@ -12,8 +12,8 @@ object Conf {
   val config: Configuration = Configuration(ConfigFactory.load())
   private val logger: Logger = Logger(this.getClass)
 
-  lazy val proxySecret: BigInteger = BigInt(readKey("proxy.secret"), 16).bigInteger
-  lazy val proxyAddress: Address = Address.create(readKey("proxy.address"))
+//  lazy val proxySecret: BigInteger = BigInt(readKey("proxy.secret"), 16).bigInteger
+//  lazy val proxyAddress: Address = Address.create(readKey("proxy.address"))
   lazy val nodeUrl: String = readKey("node.url").replaceAll("/$", "")
   lazy val networkType: NetworkType = if (readKey("node.networkType").toLowerCase.equals("mainnet")) NetworkType.MAINNET else NetworkType.TESTNET
   lazy val addressEncoder = new ErgoAddressEncoder(networkType.networkPrefix)
@@ -23,6 +23,11 @@ object Conf {
   val ergAssetsConfig: Configuration = config.get[Configuration]("erg-dex-assets")
   lazy val assets = mutable.Map.empty[String, Long]
   ergAssetsConfig.keys.foreach(asset => assets(asset) = ergAssetsConfig.get[Long](asset))
+
+  val ergoProxyConfig: Configuration = config.get[Configuration]("ergo-proxy")
+  lazy val proxyInfos = mutable.Map.empty[Address, BigInteger]
+  ergoProxyConfig.keys.foreach(info => proxyInfos(Address.create(info)) = BigInt(ergoProxyConfig.get[String](info), 16).bigInteger)
+
   lazy val defaultTxFee: Long = readKey("fee.default", "1000000L").toLong
 
   def readKey(key: String, default: String = null): String = {
