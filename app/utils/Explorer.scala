@@ -40,7 +40,7 @@ class Explorer@Inject()(networkIObject: NetworkIObject) {
       val outStinrg = tx.toString().substring(0, 2) + "id" + tx.toString().substring(7)
       singedTxs = singedTxs :+ ctx.signedTxFromJson(outStinrg)
     })
-      singedTxs
+      singedTxs.reverse
     })
   }
 
