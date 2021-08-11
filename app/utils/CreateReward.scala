@@ -146,11 +146,9 @@ class CreateReward @Inject()(networkIObject: NetworkIObject, explorer: Explorer)
     val selectedConfirmedBox = calValue(inp)
 
     if (selectedConfirmedBox.isEmpty) {
-      val unConfirmedTxs = explorer.getUnconfirmedTransactionFor(Conf.proxyAddress.toString)
-      val unConfirmedBoxes: Seq[InputBox] = unConfirmedTxs.flatMap(tx => {
-        tx.getOutputsToSpend.asScala.filter(box => {
+      val unConfirmedTxs = explorer.getLastUnconfirmedTransactionFor(Conf.proxyAddress.toString)
+      val unConfirmedBoxes: Seq[InputBox] = unConfirmedTxs.get.getOutputsToSpend.asScala.filter(box => {
           Conf.addressEncoder.fromProposition(box.getErgoTree).get.toString == Conf.proxyAddress.toString
-        })
       })
       val selectedUnConfirmedBox = calValue(unConfirmedBoxes)
       if (selectedUnConfirmedBox.isEmpty) {

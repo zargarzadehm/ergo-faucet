@@ -25,22 +25,27 @@ class Explorer@Inject()(networkIObject: NetworkIObject) {
     inputs
   }
 
-  def getUnconfirmedTransactionFor(address: String): Seq[SignedTransaction] = try {
+  def getLastUnconfirmedTransactionFor(address: String): Option[SignedTransaction] = try {
     val res = Http(s"${Conf.explorerUrl}/transactions/unconfirmed/byAddress/$address").headers(defaultHeader).asString
     if(res.body == ""){
-      return Seq()
+      return None
     }
     networkIObject.getCtxClient(implicit ctx => {
-    var singedTxs: Seq[SignedTransaction] = Seq()
+    var bestTx: SignedTransaction = null
     val newJson = res.body.replaceAll("id", "boxId")
       .replaceAll("txId", "transactionId")
       .replaceAll("null", "\"\"")
     val js = Json.parse(newJson)
+    var last_time_stamp = 100000000000000000L
     (js \ "items").as[Seq[JsValue]].foreach(tx => {
+      val timestamp = (js \ "creationTimestamp").as[Long]
+      if (last_time_stamp < timestamp) {
+        last_time_stamp = timestamp
+      }
       val outStinrg = tx.toString().substring(0, 2) + "id" + tx.toString().substring(7)
-      singedTxs = singedTxs :+ ctx.signedTxFromJson(outStinrg)
+      bestTx = ctx.signedTxFromJson(outStinrg)
     })
-      singedTxs.reverse
+     Option(bestTx)
     })
   }
 
