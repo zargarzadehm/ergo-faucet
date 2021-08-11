@@ -38,7 +38,7 @@ class Explorer@Inject()(networkIObject: NetworkIObject) {
     val js = Json.parse(newJson)
     var last_time_stamp = 100000000000000000L
     (js \ "items").as[Seq[JsValue]].foreach(tx => {
-      val timestamp = (js \ "creationTimestamp").as[Long]
+      val timestamp = (tx \ "creationTimestamp").as[Long]
       if (last_time_stamp < timestamp) {
         last_time_stamp = timestamp
       }
