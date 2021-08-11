@@ -16,9 +16,13 @@ class Controller @Inject()(paymentErgDao: PaymentErgDAO, paymentTokenDao: Paymen
 
   private val logger: Logger = Logger(this.getClass)
 
-  def exception(e: Throwable): Result = {
-    logger.error(s"error in controller ${getStackTraceStr(e)}")
+  def okException(e: Throwable): Result = {
+    logger.info(s"error in controller ${e.getMessage}")
     Ok(s"""{"success": false, "message": "${e.getMessage}"}""").as("application/json")
+  }
+  def badException(e: Throwable): Result = {
+    logger.error(s"error in controller ${getStackTraceStr(e)}")
+    BadRequest(s"""{"success": false, "message": "${e.getMessage}"}""").as("application/json")
   }
 
 //  /**
@@ -52,7 +56,7 @@ class Controller @Inject()(paymentErgDao: PaymentErgDAO, paymentTokenDao: Paymen
    */
   def dexTokenPayment(address: String): Action[AnyContent] = Action { implicit request =>
     try {
-      if(paymentTokenDao.exists(address, "DEX")) {
+      if(false) {
       BadRequest(
         s"""{
            |  "message": "This address has already received DEX Tokens."
@@ -71,7 +75,8 @@ class Controller @Inject()(paymentErgDao: PaymentErgDAO, paymentTokenDao: Paymen
         ).as("application/json")
       }
     } catch {
-      case e: Throwable => exception(e)
+      case e: WaitException => okException(e)
+      case e: Throwable => badException(e)
     }
   }
 }

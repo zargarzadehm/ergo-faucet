@@ -22,12 +22,14 @@ object Util {
     new scala.util.Random(random).shuffle(seq).headOption
   }
 
+  final case class WaitException(private val message: String = "please wait and try later") extends Throwable(message)
+
   def validateAddress(address: String): Boolean = {
     try{
       Conf.addressEncoder.fromString(address).get.script
       true
     } catch {
-      case _: Throwable => throw new Exception("Invalid withdraw address")
+      case _: Throwable => throw new Throwable("Invalid withdraw address")
     }
   }
 }

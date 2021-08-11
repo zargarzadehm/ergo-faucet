@@ -149,7 +149,7 @@ class CreateReward @Inject()(networkIObject: NetworkIObject, explorer: Explorer)
 
     if (boxesVal._2.isEmpty) {
       logger.info(s"please wait and try later")
-      throw new Throwable("please wait and try later")
+      throw new WaitException
     }
     else if (boxesVal._1 > 0){
      networkIObject.getCtxClient(implicit ctx => {
