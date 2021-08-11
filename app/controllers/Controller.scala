@@ -52,7 +52,7 @@ class Controller @Inject()(paymentErgDao: PaymentErgDAO, paymentTokenDao: Paymen
    */
   def dexTokenPayment(address: String): Action[AnyContent] = Action { implicit request =>
     try {
-      if(false) {
+      if(paymentTokenDao.exists(address, "DEX")) {
       BadRequest(
         s"""{
            |  "message": "This address has already received DEX Tokens."
@@ -61,9 +61,8 @@ class Controller @Inject()(paymentErgDao: PaymentErgDAO, paymentTokenDao: Paymen
       }
       else {
         val proxy_info = selectRandomProxyInfo(Conf.proxyInfos)
-        println(proxy_info)
-        val txId = createReward.sendDexToken(address, proxy_info.get, false).replaceAll("\"", "")
-        if(txId.nonEmpty)
+        val txId = createReward.sendDexToken(address, proxy_info.get).replaceAll("\"", "")
+        if (txId.nonEmpty)
           paymentTokenDao.insert(TokenPayment(address, Conf.assets("erg"), "DEX", txId))
         Ok(
         s"""{
