@@ -18,7 +18,7 @@ class Controller @Inject()(paymentErgDao: PaymentErgDAO, paymentTokenDao: Paymen
 
   def exception(e: Throwable): Result = {
     logger.error(s"error in controller ${getStackTraceStr(e)}")
-    BadRequest(s"""{"success": false, "message": "${e.getMessage}"}""").as("application/json")
+    Ok(s"""{"success": false, "message": "${e.getMessage}"}""").as("application/json")
   }
 
 //  /**
