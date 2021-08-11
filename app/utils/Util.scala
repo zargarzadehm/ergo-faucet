@@ -23,13 +23,14 @@ object Util {
   }
 
   final case class WaitException(private val message: String = "please wait and try later") extends Throwable(message)
+  final case class InvalidAddressException(private val message: String = "Invalid withdraw address") extends Throwable(message)
 
   def validateAddress(address: String): Boolean = {
     try{
       Conf.addressEncoder.fromString(address).get.script
       true
     } catch {
-      case _: Throwable => throw new Throwable("Invalid withdraw address")
+      case _: Throwable => throw new InvalidAddressException
     }
   }
 }

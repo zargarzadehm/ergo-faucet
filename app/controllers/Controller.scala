@@ -24,6 +24,10 @@ class Controller @Inject()(paymentErgDao: PaymentErgDAO, paymentTokenDao: Paymen
     logger.error(s"error in controller ${getStackTraceStr(e)}")
     BadRequest(s"""{"success": false, "message": "${e.getMessage}"}""").as("application/json")
   }
+  def medException(e: Throwable): Result = {
+    logger.info(s"error in controller ${e.getMessage}")
+    BadRequest(s"""{"success": false, "message": "${e.getMessage}"}""").as("application/json")
+  }
 
 //  /**
 //   * Send erg
@@ -76,6 +80,7 @@ class Controller @Inject()(paymentErgDao: PaymentErgDAO, paymentTokenDao: Paymen
       }
     } catch {
       case e: WaitException => okException(e)
+      case e: InvalidAddressException => medException(e)
       case e: Throwable => badException(e)
     }
   }
