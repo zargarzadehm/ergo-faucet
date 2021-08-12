@@ -141,7 +141,7 @@ class CreateReward @Inject()(networkIObject: NetworkIObject, explorer: Explorer)
     }
     var selectedBox: InputBox = null
     var outBoxes: Seq[InputBox] = Seq.empty
-    outBoxes = networkIObject.getUnspentBox(proxy_info._1)
+    outBoxes = outBoxes ++ networkIObject.getUnspentBox(proxy_info._1)
     val unConfirmedBoxes = explorer.getUnconfirmedOutputsFor(proxy_info._1.toString)
     val unConfirmedInputsBoxesIds = unConfirmedBoxes.map(_.id)
     val boxesVal = calValue(outBoxes.filter(box => {
@@ -183,7 +183,10 @@ class CreateReward @Inject()(networkIObject: NetworkIObject, explorer: Explorer)
         .build()
       val signed = prover.sign(tx)
       logger.debug(s"reward data ${signed.toJson(false)}")
-      txId = if (sendTransaction) ctx.sendTransaction(signed) else ""
+      txId = if (sendTransaction) {
+        val result = ctx.sendTransaction(signed)
+        if (result == null) throw new WaitException else result
+      } else ""
       logger.info(s"sending reward tx ${txId} to ${address}")
     })
     txId
