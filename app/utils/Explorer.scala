@@ -1,12 +1,13 @@
 package utils
 
-import javax.inject.Singleton
+import javax.inject.{Inject, Singleton}
 import models.Box
+import org.ergoplatform.appkit.SignedTransaction
 import play.api.libs.json._
 import scalaj.http.Http
 
 @Singleton
-class Explorer {
+class Explorer @Inject()(networkIObject: NetworkIObject) {
   private val defaultHeader: Seq[(String, String)] = Seq[(String, String)](("Content-Type", "application/json"), ("Accept", "application/json"))
 
   def getUnconfirmedOutputsFor(address: String): Seq[Box] = try {
@@ -22,5 +23,27 @@ class Explorer {
         }).filter(_.address.equals(address))
     })
     inputs
+  }
+
+  def getUnconfirmedTransactionFor(address: String): Seq[SignedTransaction] = try {
+    val res = Http(s"${Conf.explorerUrl}/transactions/unconfirmed/byAddress/$address").headers(defaultHeader).asString
+    if(res.body == ""){
+      return Seq.empty
+    }
+    networkIObject.getCtxClient(implicit ctx => {
+    var unconfirmedTx: Seq[SignedTransaction] = Seq.empty
+    val newJson = res.body.replaceAll("id", "boxId")
+      .replaceAll("txId", "transactionId")
+      .replaceAll("null", "\"\"")
+    val js = Json.parse(newJson)
+    if(js.toString() == ""){
+      return Seq.empty
+    }
+    (js \ "items").as[Seq[JsValue]].foreach(tx => {
+      val outStinrg = tx.toString().substring(0, 2) + "id" + tx.toString().substring(7)
+      unconfirmedTx = unconfirmedTx :+ ctx.signedTxFromJson(outStinrg)
+    })
+     unconfirmedTx
+    })
   }
 }

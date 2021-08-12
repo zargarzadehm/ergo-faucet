@@ -89,13 +89,13 @@ class CreateReward @Inject()(networkIObject: NetworkIObject, explorer: Explorer)
   def sendDexToken(address: String, proxy_info: (Address, BigInteger), sendTransaction: Boolean = true): String = {
     validateAddress(address)
     var txId = ""
-    def createProxyBox(proxyBox: (Long, Seq[InputBox], Seq[ErgoToken])): OutBox = {
+    def createProxyBox(proxyBox: InputBox): OutBox = {
       networkIObject.getCtxClient(implicit ctx => {
         val txB = ctx.newTxBuilder()
         var newProxyBox = txB.outBoxBuilder()
-        newProxyBox = newProxyBox.value(proxyBox._1 - Conf.assets("erg") - Conf.defaultTxFee)
-        if (proxyBox._3.nonEmpty) {
-          val tokens = proxyBox._3.map(token => {
+        newProxyBox = newProxyBox.value(proxyBox.getValue - Conf.assets("erg") - Conf.defaultTxFee)
+        if (proxyBox.getTokens.asScala.nonEmpty) {
+          val tokens = proxyBox.getTokens.asScala.map(token => {
             if (Conf.assets.get(token.getId.toString).isDefined)
             new ErgoToken(token.getId, token.getValue - Conf.assets(token.getId.toString))
             else token
@@ -139,26 +139,44 @@ class CreateReward @Inject()(networkIObject: NetworkIObject, explorer: Explorer)
       }
       (inputValue, boxes, inputAssets.map(asset => new ErgoToken(asset._1, asset._2)).toSeq)
     }
-
-    val boxes = networkIObject.getUnspentBox(proxy_info._1)
+    var selectedBox: InputBox = null
+    var outBoxes: Seq[InputBox] = Seq.empty
+    outBoxes = networkIObject.getUnspentBox(proxy_info._1)
     val unConfirmedBoxes = explorer.getUnconfirmedOutputsFor(proxy_info._1.toString)
     val unConfirmedInputsBoxesIds = unConfirmedBoxes.map(_.id)
-    val boxesVal = calValue(boxes.filter(box => {
+    val boxesVal = calValue(outBoxes.filter(box => {
       !unConfirmedInputsBoxesIds.contains(box.getId.toString)
     }))
 
     if (boxesVal._2.isEmpty) {
-      logger.info(s"please wait and try later")
-      throw new WaitException
+      outBoxes = Seq.empty
+      var inBoxIds: Seq[String] = Seq.empty
+      val unconfirmedTxs = explorer.getUnconfirmedTransactionFor(proxy_info._1.toString)
+      unconfirmedTxs.foreach(tx => {
+        if (Conf.addressEncoder.fromProposition(tx.getOutputsToSpend.get(0).getErgoTree).get.toString == proxy_info._1.toString) {
+          val box = calValue(Seq(tx.getOutputsToSpend.get(0)))
+          if (box._2.nonEmpty) {
+            outBoxes = outBoxes ++ box._2
+            inBoxIds = inBoxIds :+ tx.getSignedInputs.get(0).getId.toString
+          }
+        }
+      })
+
+      val noSpent = outBoxes.filterNot(box => inBoxIds.contains(box.getId.toString))
+      if (noSpent.isEmpty) {
+              logger.error(s"there is not enough Erg or Token for ${proxy_info._1}")
+              throw new WaitException
+      }
+      else selectedBox = noSpent.head
     }
-    else if (boxesVal._1 > 0){
-     networkIObject.getCtxClient(implicit ctx => {
+    else selectedBox = boxesVal._2.head
+    networkIObject.getCtxClient(implicit ctx => {
       val prover = ctx.newProverBuilder()
         .withDLogSecret(proxy_info._2)
         .build()
-      val outputs: Seq[OutBox] = Seq(createProxyBox(boxesVal), createRewardBox())
+      val outputs: Seq[OutBox] = Seq(createProxyBox(selectedBox), createRewardBox())
       val txB = ctx.newTxBuilder()
-      val tx = txB.boxesToSpend(boxesVal._2.asJava)
+      val tx = txB.boxesToSpend(Seq(selectedBox).asJava)
         .fee(Conf.defaultTxFee)
         .outputs(outputs: _*)
         .sendChangeTo(proxy_info._1.getErgoAddress)
@@ -168,11 +186,6 @@ class CreateReward @Inject()(networkIObject: NetworkIObject, explorer: Explorer)
       txId = if (sendTransaction) ctx.sendTransaction(signed) else ""
       logger.info(s"sending reward tx ${txId} to ${address}")
     })
-    }
-    else {
-      logger.info(s"there is not enough Erg or Token")
-      throw new Throwable("there is not enough Erg or Token")
-    }
     txId
   }
 }

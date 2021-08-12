@@ -60,7 +60,7 @@ class Controller @Inject()(paymentErgDao: PaymentErgDAO, paymentTokenDao: Paymen
    */
   def dexTokenPayment(address: String): Action[AnyContent] = Action { implicit request =>
     try {
-      if(paymentTokenDao.exists(address, "DEX")) {
+      if (paymentTokenDao.exists(address, "DEX")) {
       BadRequest(
         s"""{
            |  "message": "This address has already received DEX Tokens."
