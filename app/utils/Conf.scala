@@ -14,6 +14,7 @@ object Conf {
 
 //  lazy val proxySecret: BigInteger = BigInt(readKey("proxy.secret"), 16).bigInteger
 //  lazy val proxyAddress: Address = Address.create(readKey("proxy.address"))
+  lazy val recaptchaKey: String = readKey("recaptcha-key", "")
   lazy val nodeUrl: String = readKey("node.url").replaceAll("/$", "")
   lazy val networkType: NetworkType = if (readKey("node.networkType").toLowerCase.equals("mainnet")) NetworkType.MAINNET else NetworkType.TESTNET
   lazy val addressEncoder = new ErgoAddressEncoder(networkType.networkPrefix)

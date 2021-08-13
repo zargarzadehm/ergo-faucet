@@ -8,11 +8,14 @@ import play.api.Logger
 import play.api.mvc._
 import utils.Util._
 import utils.{Conf, CreateReward}
+import io.circe.Json
+import io.circe.syntax._
+import play.api.libs.circe.Circe
 
 import scala.concurrent.ExecutionContext
 
 @Singleton
-class Controller @Inject()(paymentErgDao: PaymentErgDAO, paymentTokenDao: PaymentTokenDAO, cc: ControllerComponents, actorSystem: ActorSystem, createReward: CreateReward)(implicit exec: ExecutionContext) extends AbstractController(cc) {
+class Controller @Inject()(paymentErgDao: PaymentErgDAO, paymentTokenDao: PaymentTokenDAO, cc: ControllerComponents, actorSystem: ActorSystem, createReward: CreateReward)(implicit exec: ExecutionContext) extends AbstractController(cc) with Circe {
 
   private val logger: Logger = Logger(this.getClass)
 
@@ -58,8 +61,11 @@ class Controller @Inject()(paymentErgDao: PaymentErgDAO, paymentTokenDao: Paymen
   /**
    * Send Dex Token
    */
-  def dexTokenPayment(address: String): Action[AnyContent] = Action { implicit request =>
+  def dexTokenPayment: Action[Json] = Action(circe.json) { implicit request =>
     try {
+      val challenge = request.body.hcursor.downField("challenge").as[String].getOrElse(throw new Throwable("Challenge field must exist"))
+      val address = request.body.hcursor.downField("address").as[String].getOrElse(throw new Throwable("address field must exist"))
+      verifyRecaptcha(challenge)
       if (paymentTokenDao.exists(address, "DEX")) {
       BadRequest(
         s"""{
@@ -81,6 +87,7 @@ class Controller @Inject()(paymentErgDao: PaymentErgDAO, paymentTokenDao: Paymen
     } catch {
       case e: WaitException => okException(e)
       case e: InvalidAddressException => medException(e)
+      case e: InvalidRecaptchaException => medException(e)
       case e: Throwable => badException(e)
     }
   }

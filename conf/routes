@@ -1,3 +1,3 @@
 #GET         /payment/address/:address              controllers.Controller.ergPayment(address: String)
-GET         /dexToken/address/:address              controllers.Controller.dexTokenPayment(address: String)
+POST         /getDexToken            controllers.Controller.dexTokenPayment
 
