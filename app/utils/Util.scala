@@ -5,6 +5,7 @@ import java.math.BigInteger
 import java.security.SecureRandom
 
 import org.ergoplatform.appkit.Address
+import play.api.Logger
 import play.api.libs.json._
 import scalaj.http.Http
 
@@ -38,16 +39,17 @@ object Util {
   }
 
   def verifyRecaptcha(challenge: String): Unit = {
+    val logger: Logger = Logger(this.getClass)
     try{
       val defaultHeader: Seq[(String, String)] = Seq[(String, String)](("Content-Type", "application/json"), ("Accept", "application/json"))
-      val data = s"""{
-                    |  "secret": "${Conf.recaptchaKey}",
-                    |  "response": "${challenge}"
-                    |}""".stripMargin
-      val res = Http(s"https://www.google.com/recaptcha/api/siteverify").postData(data).headers(defaultHeader).asString
+      val res = Http(s"https://www.google.com/recaptcha/api/siteverify?secret=${Conf.recaptchaKey}&response=${challenge}").headers(defaultHeader).asString
       val js = Json.parse(res.body)
-      if (!(js \ "success").as[Boolean]) throw new InvalidRecaptchaException
+      if (!(js \ "success").as[Boolean]) {
+        logger.info(s"response of google ${js}")
+        throw new InvalidRecaptchaException
+      }
     } catch {
+      case _: InvalidRecaptchaException => throw new InvalidRecaptchaException
       case _: Throwable => throw new Throwable("problem in verify recaptcha")
     }
   }
