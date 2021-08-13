@@ -120,24 +120,19 @@ class CreateReward @Inject()(networkIObject: NetworkIObject, explorer: Explorer)
     }
 
     def calValue(inBoxes: Seq[InputBox]): (Long, Seq[InputBox], Seq[ErgoToken]) = {
-      var inputValue: Long = 0
-      val inputAssets = mutable.Map.empty[String, Long]
-      var boxes: Seq[InputBox] = Seq()
       for ( walletInput <- inBoxes) {
-        inputValue += walletInput.getValue
+        val inputAssets = mutable.Map.empty[String, Long]
         if (walletInput.getTokens.size() > 0) {
           walletInput.getTokens.asScala.foreach(token => inputAssets(token.getId.toString) = inputAssets.getOrElse(token.getId.toString, 0L) + token.getValue)
         }
-        boxes = boxes ++ Seq(walletInput)
-        if (inputValue >= Conf.assets("erg") + Conf.defaultTxFee && Conf.assets.map(asset => {
-          if (inputAssets.get(asset._1).isDefined) {
-            if (inputAssets(asset._1) >= asset._2) true
-            else false
-          }
+        val ergCondition = walletInput.getValue >= (Conf.assets("erg") + Conf.defaultTxFee)
+        val assetsCondition= Conf.assets.filterNot(_._1.equals("erg")).map(asset => {
+          if (inputAssets.get(asset._1).isDefined) inputAssets(asset._1) >= asset._2
           else false
-        }).reduce(_ && _)) return (inputValue, boxes, inputAssets.map(asset => new ErgoToken(asset._1, asset._2)).toSeq)
+        }).reduce(_&&_)
+        if (ergCondition && assetsCondition) return (walletInput.getValue, Seq(walletInput), walletInput.getTokens.asScala)
       }
-      (inputValue, boxes, inputAssets.map(asset => new ErgoToken(asset._1, asset._2)).toSeq)
+      (0L, Seq.empty, Seq.empty)
     }
     var selectedBox: InputBox = null
     var outBoxes: Seq[InputBox] = Seq.empty
@@ -147,7 +142,8 @@ class CreateReward @Inject()(networkIObject: NetworkIObject, explorer: Explorer)
     val boxesVal = calValue(outBoxes.filter(box => {
       !unConfirmedInputsBoxesIds.contains(box.getId.toString)
     }))
-
+    println(boxesVal._2.size)
+    println(boxesVal._2.map(_.getId.toString))
     if (boxesVal._2.isEmpty) {
       outBoxes = Seq.empty
       var inBoxIds: Seq[String] = Seq.empty
@@ -187,7 +183,7 @@ class CreateReward @Inject()(networkIObject: NetworkIObject, explorer: Explorer)
         val result = ctx.sendTransaction(signed)
         if (result == null) throw new WaitException else result
       } else ""
-      logger.info(s"sending reward tx ${txId} to ${address}")
+      logger.info(s"sending reward tx ${txId} from ${proxy_info._1.toString.substring(0, 6)} to ${address}")
     })
     txId
   }
