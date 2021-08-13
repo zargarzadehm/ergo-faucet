@@ -95,12 +95,15 @@ class CreateReward @Inject()(networkIObject: NetworkIObject, explorer: Explorer)
         var newProxyBox = txB.outBoxBuilder()
         newProxyBox = newProxyBox.value(proxyBox.getValue - Conf.assets("erg") - Conf.defaultTxFee)
         if (proxyBox.getTokens.asScala.nonEmpty) {
-          val tokens = proxyBox.getTokens.asScala.map(token => {
-            if (Conf.assets.get(token.getId.toString).isDefined)
-            new ErgoToken(token.getId, token.getValue - Conf.assets(token.getId.toString))
-            else token
+          var tokens: Seq[ErgoToken] = Seq.empty
+          proxyBox.getTokens.asScala.foreach( token => {
+            if (Conf.assets.get(token.getId.toString).isDefined) {
+              if ((token.getValue - Conf.assets(token.getId.toString)) > 0)
+                tokens = tokens :+ new ErgoToken(token.getId, token.getValue - Conf.assets(token.getId.toString))
+            }
+            else tokens =  tokens :+ token
           })
-          newProxyBox = newProxyBox.tokens(tokens: _*)
+          if (tokens.nonEmpty) newProxyBox = newProxyBox.tokens(tokens: _*)
         }
         newProxyBox.contract(new ErgoTreeContract(proxy_info._1.getErgoAddress.script))
         newProxyBox.build()
@@ -142,8 +145,6 @@ class CreateReward @Inject()(networkIObject: NetworkIObject, explorer: Explorer)
     val boxesVal = calValue(outBoxes.filter(box => {
       !unConfirmedInputsBoxesIds.contains(box.getId.toString)
     }))
-    println(boxesVal._2.size)
-    println(boxesVal._2.map(_.getId.toString))
     if (boxesVal._2.isEmpty) {
       outBoxes = Seq.empty
       var inBoxIds: Seq[String] = Seq.empty
