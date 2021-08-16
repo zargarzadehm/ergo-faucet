@@ -15,7 +15,7 @@ import play.api.libs.circe.Circe
 import scala.concurrent.ExecutionContext
 
 @Singleton
-class Controller @Inject()(paymentErgDao: PaymentErgDAO, paymentTokenDao: PaymentTokenDAO, cc: ControllerComponents, actorSystem: ActorSystem, createReward: CreateReward)(implicit exec: ExecutionContext) extends AbstractController(cc) with Circe {
+class Controller @Inject()(assets: Assets, paymentErgDao: PaymentErgDAO, paymentTokenDao: PaymentTokenDAO, cc: ControllerComponents, actorSystem: ActorSystem, createReward: CreateReward)(implicit exec: ExecutionContext) extends AbstractController(cc) with Circe {
 
   private val logger: Logger = Logger(this.getClass)
 
@@ -32,31 +32,47 @@ class Controller @Inject()(paymentErgDao: PaymentErgDAO, paymentTokenDao: Paymen
     BadRequest(s"""{"success": false, "message": "${e.getMessage}"}""").as("application/json")
   }
 
-//  /**
-//   * Send erg
-//   */
-//  def ergPayment(address: String): Action[AnyContent] = Action { implicit request =>
-//    try {
-//      if(paymentErgDao.exists(address)) {
-//      BadRequest(
-//        s"""{
-//           |  "message": "This address has already received an ERG."
-//           |}""".stripMargin
-//      ).as("application/json")
-//      }
-//      else {
-//        val txId = createReward.sendErg(address).replaceAll("\"", "")
-//        paymentErgDao.insert(Payment(address, Conf.defaultAmount, txId))
-//        Ok(
-//        s"""{
-//           |  "txId": "${Conf.explorerFrontUrl}/en/transactions/${txId}"
-//           |}""".stripMargin
-//        ).as("application/json")
-//      }
-//    } catch {
-//      case e: Throwable => exception(e)
-//    }
-//  }
+  def index: Action[AnyContent] = assets.at("index.html")
+
+  def assetOrDefault(resource: String): Action[AnyContent] = {
+    if (resource.contains(".")) assets.at(resource) else index
+  }
+
+  /**
+   * Send erg
+   */
+  def ergPayment: Action[Json] = Action(circe.json){ implicit request =>
+    try {
+      val response = request.body.hcursor.downField("response").as[String].getOrElse(throw new Throwable("response field must exist"))
+      val address = request.body.hcursor.downField("address").as[String].getOrElse(throw new Throwable("address field must exist"))
+
+      verifyRecaptcha(response)
+
+      if(paymentErgDao.exists(address)) {
+      BadRequest(
+        s"""{
+           |  "message": "This address has already received an ERG."
+           |}""".stripMargin
+      ).as("application/json")
+      }
+      else {
+        val proxy_info = selectRandomProxyInfo(Conf.proxyInfos)
+        val txId = createReward.sendErg(address, proxy_info.get).replaceAll("\"", "")
+        if (txId.nonEmpty)
+          paymentErgDao.insert(Payment(address, Conf.defaultAmount, txId))
+        Ok(
+        s"""{
+           |  "txId": "${Conf.explorerFrontUrl}/en/transactions/${txId}"
+           |}""".stripMargin
+        ).as("application/json")
+      }
+    } catch {
+      case e: WaitException => okException(e)
+      case e: InvalidAddressException => medException(e)
+      case e: InvalidRecaptchaException => medException(e)
+      case e: Throwable => badException(e)
+    }
+  }
 
   /**
    * Send Dex Token

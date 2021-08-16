@@ -14,78 +14,79 @@ import scala.collection.mutable
 
 class CreateReward @Inject()(networkIObject: NetworkIObject, explorer: Explorer){
   private val logger: Logger = Logger(this.getClass)
-//  def sendErg(address: String, sendTransaction: Boolean = true): String = {
-//    validateAddress(address)
-//    var txId = ""
-//    def createProxyBox(proxyBox: (Long, Seq[InputBox], Seq[ErgoToken])): OutBox = {
-//      networkIObject.getCtxClient(implicit ctx => {
-//        val txB = ctx.newTxBuilder()
-//        var newProxyBox = txB.outBoxBuilder()
-//        newProxyBox = newProxyBox.value(proxyBox._1 - Conf.defaultAmount - Conf.defaultTxFee)
-//        if (proxyBox._3.nonEmpty) newProxyBox = newProxyBox.tokens(proxyBox._3: _*)
-//        newProxyBox.contract(new ErgoTreeContract(Conf.proxyAddress.getErgoAddress.script))
-//        newProxyBox.build()
-//      })
-//    }
-//
-//    def createRewardBox(): OutBox = {
-//      networkIObject.getCtxClient(implicit ctx => {
-//        val txB = ctx.newTxBuilder()
-//        var newProxyBox = txB.outBoxBuilder()
-//        newProxyBox = newProxyBox.value(Conf.defaultAmount)
-//        newProxyBox.contract(new ErgoTreeContract(Address.create(address).getErgoAddress.script))
-//        newProxyBox.build()
-//      })
-//    }
-//
-//    def calValue(inBoxes: Seq[InputBox]): (Long, Seq[InputBox], Seq[ErgoToken]) = {
-//      var inputValue: Long = 0
-//      var tokens: Seq[ErgoToken] = Seq()
-//      var boxes: Seq[InputBox] = Seq()
-//      for ( walletInput <- inBoxes) {
-//        inputValue += walletInput.getValue
-//        if (walletInput.getTokens.size() > 0) tokens = tokens ++ walletInput.getTokens.asScala
-//        boxes = boxes ++ Seq(walletInput)
-//        if (inputValue >= Conf.defaultAmount + Conf.defaultTxFee) return (inputValue, boxes, tokens)
-//      }
-//      (inputValue, boxes, tokens)
-//    }
-//
-//    val boxes = networkIObject.getUnspentBox(Conf.proxyAddress)
-//    val unConfirmedBoxes = explorer.getUnconfirmedOutputsFor(Conf.proxyAddress.toString)
-//    val unConfirmedInputsBoxesIds = unConfirmedBoxes.map(_.id)
-//    val boxesVal = calValue(boxes.filter(box => {
-//      !unConfirmedInputsBoxesIds.contains(box.getId.toString)
-//    }))
-//
-//    if (boxesVal._2.isEmpty) {
-//      logger.info(s"please wait and try later")
-//      throw new Throwable("please wait and try later")
-//    }
-//    else if (boxesVal._1 > 0){
-//     networkIObject.getCtxClient(implicit ctx => {
-//      val prover = ctx.newProverBuilder()
-//        .withDLogSecret(Conf.proxySecret)
-//        .build()
-//      val outputs: Seq[OutBox] = Seq(createProxyBox(boxesVal), createRewardBox())
-//      val txB = ctx.newTxBuilder()
-//      val tx = txB.boxesToSpend(boxesVal._2.asJava)
-//        .fee(Conf.defaultTxFee)
-//        .outputs(outputs: _*)
-//        .sendChangeTo(Conf.proxyAddress.getErgoAddress)
-//        .build()
-//      val signed = prover.sign(tx)
-//      logger.debug(s"reward data ${signed.toJson(false)}")
-//      txId = if (sendTransaction) ctx.sendTransaction(signed) else ""
-//      logger.info(s"sending reward tx ${txId}")
-//    })
-//    }
-//    else {
-//      logger.info(s"there is not enough Erg")
-//      throw new Throwable("there is not enough Erg")
-//    }
-//    txId
-//  }
+  def sendErg(address: String,  proxy_info: (Address, BigInteger), sendTransaction: Boolean = true): String = {
+    validateAddress(address)
+    var txId = ""
+    def createProxyBox(proxyBox: (Long, Seq[InputBox], Seq[ErgoToken])): OutBox = {
+      networkIObject.getCtxClient(implicit ctx => {
+        val txB = ctx.newTxBuilder()
+        var newProxyBox = txB.outBoxBuilder()
+        newProxyBox = newProxyBox.value(proxyBox._1 - Conf.defaultAmount - Conf.defaultTxFee)
+        if (proxyBox._3.nonEmpty) newProxyBox = newProxyBox.tokens(proxyBox._3: _*)
+        newProxyBox.contract(new ErgoTreeContract(proxy_info._1.getErgoAddress.script))
+        newProxyBox.build()
+      })
+    }
+
+    def createRewardBox(): OutBox = {
+      networkIObject.getCtxClient(implicit ctx => {
+        val txB = ctx.newTxBuilder()
+        var newProxyBox = txB.outBoxBuilder()
+        newProxyBox = newProxyBox.value(Conf.defaultAmount)
+        newProxyBox.contract(new ErgoTreeContract(Address.create(address).getErgoAddress.script))
+        newProxyBox.build()
+      })
+    }
+
+    def calValue(inBoxes: Seq[InputBox]): (Long, Seq[InputBox], Seq[ErgoToken]) = {
+      var inputValue: Long = 0
+      var tokens: Seq[ErgoToken] = Seq()
+      var boxes: Seq[InputBox] = Seq()
+      for ( walletInput <- inBoxes) {
+        inputValue += walletInput.getValue
+        if (walletInput.getTokens.size() > 0) tokens = tokens ++ walletInput.getTokens.asScala
+        boxes = boxes ++ Seq(walletInput)
+        if (inputValue >= Conf.defaultAmount + Conf.defaultTxFee) return (inputValue, boxes, tokens)
+      }
+      (inputValue, boxes, tokens)
+    }
+
+    val boxes = networkIObject.getUnspentBox(proxy_info._1)
+    val unConfirmedBoxes = explorer.getUnconfirmedOutputsFor(proxy_info._1.toString)
+    val unConfirmedInputsBoxesIds = unConfirmedBoxes.map(_.id)
+    val boxesVal = calValue(boxes.filter(box => {
+      !unConfirmedInputsBoxesIds.contains(box.getId.toString)
+    }))
+
+    if (boxesVal._2.isEmpty) {
+      logger.info(s"please wait and try later")
+      throw new Throwable("please wait and try later")
+    }
+    else if (boxesVal._1 > 0){
+     networkIObject.getCtxClient(implicit ctx => {
+      val prover = ctx.newProverBuilder()
+        .withDLogSecret(proxy_info._2)
+        .build()
+      val outputs: Seq[OutBox] = Seq(createProxyBox(boxesVal), createRewardBox())
+      val txB = ctx.newTxBuilder()
+      val tx = txB.boxesToSpend(boxesVal._2.asJava)
+        .fee(Conf.defaultTxFee)
+        .outputs(outputs: _*)
+        .sendChangeTo(proxy_info._1.getErgoAddress)
+        .build()
+      val signed = prover.sign(tx)
+      logger.debug(s"reward data ${signed.toJson(false)}")
+      txId = if (sendTransaction) ctx.sendTransaction(signed) else ""
+      logger.info(s"sending reward tx ${txId}")
+    })
+    }
+    else {
+      logger.info(s"there is not enough Erg")
+      throw new Throwable("there is not enough Erg")
+    }
+    txId
+  }
+
   def sendDexToken(address: String, proxy_info: (Address, BigInteger), sendTransaction: Boolean = true): String = {
     validateAddress(address)
     var txId = ""

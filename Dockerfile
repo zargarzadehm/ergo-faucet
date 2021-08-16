@@ -1,3 +1,11 @@
+FROM node:12.14 as builder-front
+
+WORKDIR /usr/src/app
+COPY ./ergo-faucet-ui/package.json ./
+RUN npm install
+COPY ./ergo-faucet-ui ./
+RUN npm run build
+
 FROM openjdk:8-jre-slim as builder_code
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update && \
@@ -22,6 +30,7 @@ ADD ["./project", "/ergo-faucet/src/project"]
 COPY build.sbt /ergo-faucet/src/
 
 WORKDIR /ergo-faucet/src/
+COPY --from=builder-front /usr/src/app/build/ ./public/
 RUN sbt assembly
 RUN mv `find . -name ergo-faucet-*.jar` /ergo-faucet.jar
 CMD ["java", "-jar", "/ergo-faucet.jar"]

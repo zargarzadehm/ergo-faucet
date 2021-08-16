@@ -1,0 +1,3 @@
+[submodule "ergo-faucet-ui"]
+	path = ergo-faucet-ui
+	url = https://github.com/zargarzadehm/ergo-faucet-ui.git
