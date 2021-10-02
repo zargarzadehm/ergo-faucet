@@ -6,29 +6,13 @@ RUN npm install
 COPY ./ergo-faucet-ui ./
 RUN npm run build
 
-FROM openjdk:8-jre-slim as builder_code
-ENV DEBIAN_FRONTEND noninteractive
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends apt-transport-https apt-utils bc dirmngr gnupg && \
-    echo "deb https://repo.scala-sbt.org/scalasbt/debian all main" | tee /etc/apt/sources.list.d/sbt.list && \
-    echo "deb https://repo.scala-sbt.org/scalasbt/debian /" | tee /etc/apt/sources.list.d/sbt_old.list && \
-    apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2EE0EA64E40A89B84B2DF73499E82A75642AC823 && \
-    apt-get update && \
-    apt-get upgrade -y && \
-    apt-get install -y --no-install-recommends sbt=1.2.7 wget
-
+FROM mozilla/sbt:8u181_1.2.7 as builder
 WORKDIR /ergo-faucet
-
-RUN wget https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-19.3.1/graalvm-ce-java8-linux-amd64-19.3.1.tar.gz && \
-    tar -xf graalvm-ce-java8-linux-amd64-19.3.1.tar.gz
-ENV JAVA_HOME="/ergo-faucet/graalvm-ce-java8-19.3.1"
-ENV PATH="${JAVA_HOME}/bin:$PATH"
 
 ADD ["./app", "/ergo-faucet/src/app"]
 ADD ["./conf", "/ergo-faucet/src/conf"]
 ADD ["./project", "/ergo-faucet/src/project"]
 COPY build.sbt /ergo-faucet/src/
-
 WORKDIR /ergo-faucet/src/
 COPY --from=builder-front /usr/src/app/build/ ./public/
 RUN sbt assembly
