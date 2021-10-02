@@ -15,8 +15,6 @@ object Conf {
   val config: Configuration = Configuration(ConfigFactory.load())
   private val logger: Logger = Logger(this.getClass)
 
-//  lazy val proxySecret: BigInteger = BigInt(readKey("proxy.secret"), 16).bigInteger
-//  lazy val proxyAddress: Address = Address.create(readKey("proxy.address"))
   lazy val recaptchaKey: String = readKey("recaptcha-key", "")
   lazy val nodeUrl: String = readKey("node.url").replaceAll("/$", "")
   lazy val networkType: NetworkType = if (readKey("node.networkType").toLowerCase.equals("mainnet")) NetworkType.MAINNET else NetworkType.TESTNET
@@ -35,30 +33,6 @@ object Conf {
     lastId += 1
     ergoAssets(lastId) = AssetConfig(asName, ergoAssetsTmp)
   })
-//  try{
-//
-//
-//  }
-//  catch {
-//      case e: Throwable =>
-//        println("--------------------------------------------------------------------------------------------------------")
-//        println(ergoAssetsConfig.subKeys)
-//        getStackTraceStr(e)
-//        println(e)
-//  }
-//  println(e.getMessage)
-
-
-//  val ergoAssets = mutable.Map.empty[String, Long]
-//  ergoAssetsConfig.keys.filterNot(name=> name.equals("name")).foreach(asset => ergoAssets(asset) = ergoAssetsConfig.get[Long](asset))
-//
-//  val ergAssetsConfig: Configuration = config.get[Configuration]("erg-asset")
-//  lazy val ergAssets = mutable.Map.empty[String, Long]
-//  ergAssetsConfig.keys.foreach(asset => ergAssets(asset) = ergAssetsConfig.get[Long](asset))
-//
-//  val ergDexAssetsConfig: Configuration = config.get[Configuration]("erg-dex-assets")
-//  lazy val dexAssets = mutable.Map.empty[String, Long]
-//  ergDexAssetsConfig.keys.foreach(asset => dexAssets(asset) = ergDexAssetsConfig.get[Long](asset))
 
   val ergoProxyConfig: Configuration = config.get[Configuration]("ergo-proxy")
   lazy val proxyInfos = mutable.Map.empty[Address, BigInteger]
