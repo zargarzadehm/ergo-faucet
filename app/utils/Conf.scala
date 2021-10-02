@@ -6,6 +6,9 @@ import com.typesafe.config.ConfigFactory
 import play.api.{Configuration, Logger}
 import java.math.BigInteger
 
+import models.AssetConfig
+import utils.Util.getStackTraceStr
+
 import scala.collection.mutable
 
 object Conf {
@@ -20,10 +23,42 @@ object Conf {
   lazy val addressEncoder = new ErgoAddressEncoder(networkType.networkPrefix)
   lazy val explorerUrl: String = readKey("explorer.url-back").replaceAll("/$", "")
   lazy val explorerFrontUrl: String = readKey("explorer.url-front").replaceAll("/$", "")
-  lazy val defaultAmount: Long = readKey("faucet.default", "60000000000L").toLong
-  val ergAssetsConfig: Configuration = config.get[Configuration]("erg-dex-assets")
-  lazy val assets = mutable.Map.empty[String, Long]
-  ergAssetsConfig.keys.foreach(asset => assets(asset) = ergAssetsConfig.get[Long](asset))
+
+  var lastId = -1
+  var ergoAssets = mutable.Map.empty[Int, AssetConfig]
+  val ergoAssetsConfig: Configuration = config.get[Configuration]("ergo-assets")
+  ergoAssetsConfig.subKeys.foreach(assetName => {
+    val assetConfig: Configuration = ergoAssetsConfig.get[Configuration](assetName)
+    val asName: String = assetConfig.get[String]("name")
+    val ergoAssetsTmp = mutable.Map.empty[String, Long]
+    assetConfig.keys.filterNot(name=> name.equals("name")).foreach(asset => ergoAssetsTmp(asset) = assetConfig.get[Long](asset))
+    lastId += 1
+    ergoAssets(lastId) = AssetConfig(asName, ergoAssetsTmp)
+  })
+//  try{
+//
+//
+//  }
+//  catch {
+//      case e: Throwable =>
+//        println("--------------------------------------------------------------------------------------------------------")
+//        println(ergoAssetsConfig.subKeys)
+//        getStackTraceStr(e)
+//        println(e)
+//  }
+//  println(e.getMessage)
+
+
+//  val ergoAssets = mutable.Map.empty[String, Long]
+//  ergoAssetsConfig.keys.filterNot(name=> name.equals("name")).foreach(asset => ergoAssets(asset) = ergoAssetsConfig.get[Long](asset))
+//
+//  val ergAssetsConfig: Configuration = config.get[Configuration]("erg-asset")
+//  lazy val ergAssets = mutable.Map.empty[String, Long]
+//  ergAssetsConfig.keys.foreach(asset => ergAssets(asset) = ergAssetsConfig.get[Long](asset))
+//
+//  val ergDexAssetsConfig: Configuration = config.get[Configuration]("erg-dex-assets")
+//  lazy val dexAssets = mutable.Map.empty[String, Long]
+//  ergDexAssetsConfig.keys.foreach(asset => dexAssets(asset) = ergDexAssetsConfig.get[Long](asset))
 
   val ergoProxyConfig: Configuration = config.get[Configuration]("ergo-proxy")
   lazy val proxyInfos = mutable.Map.empty[Address, BigInteger]

@@ -1,9 +1,7 @@
 GET         /                        controllers.Controller.index
+GET          /supportedAssets            controllers.Controller.supportedAssets
+POST         /getAsset            controllers.Controller.assetPayment
+
 GET         /*file                   controllers.Controller.assetOrDefault(file)
 # Map static resources from the /public folder to the /assets URL path
 GET         /assets/*file                controllers.Assets.versioned(path="/public", file: Asset)
-
-
-POST         /getErg             controllers.Controller.ergPayment
-POST         /getDexToken            controllers.Controller.dexTokenPayment
-

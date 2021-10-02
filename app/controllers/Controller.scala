@@ -38,62 +38,47 @@ class Controller @Inject()(assets: Assets, paymentErgDao: PaymentErgDAO, payment
     if (resource.contains(".")) assets.at(resource) else index
   }
 
+
   /**
-   * Send erg
+   * get list of supported assets
    */
-  def ergPayment: Action[Json] = Action(circe.json){ implicit request =>
+  def supportedAssets: Action[AnyContent] = Action { implicit request =>
     try {
-      val response = request.body.hcursor.downField("response").as[String].getOrElse(throw new Throwable("response field must exist"))
-      val address = request.body.hcursor.downField("address").as[String].getOrElse(throw new Throwable("address field must exist"))
-
-      verifyRecaptcha(response)
-
-      if(paymentErgDao.exists(address)) {
-      BadRequest(
-        s"""{
-           |  "message": "This address has already received an ERG."
-           |}""".stripMargin
-      ).as("application/json")
-      }
-      else {
-        val proxy_info = selectRandomProxyInfo(Conf.proxyInfos)
-        val txId = createReward.sendErg(address, proxy_info.get).replaceAll("\"", "")
-        if (txId.nonEmpty)
-          paymentErgDao.insert(Payment(address, Conf.defaultAmount, txId))
-        Ok(
-        s"""{
-           |  "txId": "${Conf.explorerFrontUrl}/en/transactions/${txId}"
-           |}""".stripMargin
-        ).as("application/json")
-      }
-    } catch {
-      case e: WaitException => okException(e)
-      case e: InvalidAddressException => medException(e)
-      case e: InvalidRecaptchaException => medException(e)
+      var assetString = "{"
+      Conf.ergoAssets.foreach(asset => {
+        val res = s"""\"${asset._1}\": \"${asset._2.name}\","""
+        assetString += res
+      })
+      assetString = assetString.substring(0, assetString.length-1)
+      assetString += "}"
+      Ok(s"""$assetString""".stripMargin).as("application/json")
+    }
+    catch {
       case e: Throwable => badException(e)
     }
   }
 
   /**
-   * Send Dex Token
+   * Send all assets
    */
-  def dexTokenPayment: Action[Json] = Action(circe.json) { implicit request =>
+  def assetPayment: Action[Json] = Action(circe.json) { implicit request =>
     try {
       val challenge = request.body.hcursor.downField("challenge").as[String].getOrElse(throw new Throwable("Challenge field must exist"))
       val address = request.body.hcursor.downField("address").as[String].getOrElse(throw new Throwable("address field must exist"))
+      val assetId = request.body.hcursor.downField("assetId").as[String].getOrElse(throw new Throwable("assetId field must exist"))
       verifyRecaptcha(challenge)
-      if (paymentTokenDao.exists(address, "DEX")) {
-      BadRequest(
-        s"""{
-           |  "message": "This address has already received DEX Tokens."
-           |}""".stripMargin
-      ).as("application/json")
+      if (paymentTokenDao.exists(address, Conf.ergoAssets(assetId.toInt).name)) {
+        BadRequest(
+          s"""{
+             |  "message": "This address has already received ${Conf.ergoAssets(assetId.toInt).name} assets."
+             |}""".stripMargin
+        ).as("application/json")
       }
       else {
         val proxy_info = selectRandomProxyInfo(Conf.proxyInfos)
-        val txId = createReward.sendDexToken(address, proxy_info.get).replaceAll("\"", "")
+        val txId = createReward.sendAsset(address, proxy_info.get, Conf.ergoAssets(assetId.toInt)).replaceAll("\"", "")
         if (txId.nonEmpty)
-          paymentTokenDao.insert(TokenPayment(address, Conf.assets("erg"), "DEX", txId))
+          paymentTokenDao.insert(TokenPayment(address, Conf.ergoAssets(assetId.toInt).assets("erg"), Conf.ergoAssets(assetId.toInt).name, txId))
         Ok(
         s"""{
            |  "txId": "${Conf.explorerFrontUrl}/en/transactions/${txId}"
