@@ -1,8 +1,8 @@
 # ErgoFaucet
-This project is a Faucet service that aims to enable anyone to raise assets(Erg, Token) needed for all Ergo Projects in Mainnet or Testnet network.
+This project is a Faucet service that aims to enable anyone to gain assets(Erg, Token) needed for test most beta Ergo Projects in Mainnet or Testnet network.
 
 ## How to add any assets to faucet?
-Contact with us through one of the following channels:
+Contact with me through one of the following channels:
   * Discord: zargarzadehmoein#2928
   * Email: moein.zargarzadeh[at]gmail.com
 
