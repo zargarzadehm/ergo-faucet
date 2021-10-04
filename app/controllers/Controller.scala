@@ -53,6 +53,7 @@ class Controller @Inject()(assets: Assets, paymentErgDao: PaymentErgDAO, payment
       buttonString = buttonString.substring(0, buttonString.length-1)
       buttonString += "],"
       buttonString += s"""\"mainButton\": \"${Conf.mainButton}\","""
+      buttonString += s"""\"title\": \"${Conf.title}\","""
       buttonString += s"""\"siteKey\": \"${Conf.siteKey}\""""
       buttonString += "}"
       Ok(s"""$buttonString""".stripMargin).as("application/json")

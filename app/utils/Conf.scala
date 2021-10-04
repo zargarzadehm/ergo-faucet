@@ -18,6 +18,7 @@ object Conf {
   lazy val siteKey: String = readKey("site-key", "")
 
   lazy val mainButton: String = readKey("main-button", "")
+  lazy val title: String = readKey("title", "")
 
   var buttons: Seq[ButtonConfig] = Seq.empty
   val buttonsConfig: Configuration = config.get[Configuration]("buttons")
