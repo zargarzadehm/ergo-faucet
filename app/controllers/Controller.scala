@@ -3,13 +3,12 @@ package controllers
 import akka.actor.ActorSystem
 import dao._
 import javax.inject._
-import models.{Payment, TokenPayment}
+import models.TokenPayment
 import play.api.Logger
 import play.api.mvc._
 import utils.Util._
 import utils.{Conf, CreateReward}
 import io.circe.Json
-import io.circe.syntax._
 import play.api.libs.circe.Circe
 
 import scala.concurrent.ExecutionContext
@@ -38,6 +37,30 @@ class Controller @Inject()(assets: Assets, paymentErgDao: PaymentErgDAO, payment
     if (resource.contains(".")) assets.at(resource) else index
   }
 
+  /**
+   * get info
+   */
+  def info: Action[AnyContent] = Action { implicit request =>
+    try {
+      var buttonString = "{\"buttons\":["
+      Conf.buttons.foreach(button => {
+        val res =
+          s"""{\"name\": \"${button.name}\",
+             |\"active\": ${button.active},
+             |\"url\": \"${button.url}\"},""".stripMargin
+        buttonString += res
+      })
+      buttonString = buttonString.substring(0, buttonString.length-1)
+      buttonString += "],"
+      buttonString += s"""\"mainButton\": \"${Conf.mainButton}\","""
+      buttonString += s"""\"siteKey\": \"${Conf.siteKey}\""""
+      buttonString += "}"
+      Ok(s"""$buttonString""".stripMargin).as("application/json")
+    }
+    catch {
+      case e: Throwable => badException(e)
+    }
+  }
 
   /**
    * get list of supported assets

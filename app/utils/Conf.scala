@@ -6,8 +6,7 @@ import com.typesafe.config.ConfigFactory
 import play.api.{Configuration, Logger}
 import java.math.BigInteger
 
-import models.AssetConfig
-import utils.Util.getStackTraceStr
+import models.{AssetConfig, ButtonConfig}
 
 import scala.collection.mutable
 
@@ -16,6 +15,20 @@ object Conf {
   private val logger: Logger = Logger(this.getClass)
 
   lazy val recaptchaKey: String = readKey("recaptcha-key", "")
+  lazy val siteKey: String = readKey("site-key", "")
+
+  lazy val mainButton: String = readKey("main-button", "")
+
+  var buttons: Seq[ButtonConfig] = Seq.empty
+  val buttonsConfig: Configuration = config.get[Configuration]("buttons")
+  buttonsConfig.subKeys.foreach(buttonName => {
+    val buttonConfig: Configuration = buttonsConfig.get[Configuration](buttonName)
+    val name: String = buttonConfig.get[String]("name")
+    val url: String = buttonConfig.get[String]("url")
+    val active: Boolean = buttonConfig.get[Boolean]("active")
+    buttons = buttons :+ ButtonConfig(name, active, url)
+  })
+
   lazy val nodeUrl: String = readKey("node.url").replaceAll("/$", "")
   lazy val networkType: NetworkType = if (readKey("node.networkType").toLowerCase.equals("mainnet")) NetworkType.MAINNET else NetworkType.TESTNET
   lazy val addressEncoder = new ErgoAddressEncoder(networkType.networkPrefix)
