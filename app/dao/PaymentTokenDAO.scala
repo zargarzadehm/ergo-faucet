@@ -33,8 +33,8 @@ class PaymentTokenDAO @Inject() (protected val dbConfigProvider: DatabaseConfigP
    * inserts a Payment into db
    * @param pay Payment
    */
-  def insert(pay: TokenPayment): Future[Unit] = {
-    db.run(tokenPayments += pay).map(_ => ())
+  def insert(pay: TokenPayment): Unit = {
+    Await.result(db.run(DBIO.seq(tokenPayments += pay)).map(_ => ()), Duration.Inf)
   }
 
   /**

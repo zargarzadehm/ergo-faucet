@@ -1,9 +1,12 @@
 package utils
 
+import java.math.BigInteger
+
 import javax.inject.Inject
 import org.ergoplatform.appkit.impl.ErgoTreeContract
 import org.ergoplatform.appkit.{Address, ErgoToken, InputBox, JavaHelpers, OutBox}
 import Util._
+import models.AssetConfig
 
 import scala.collection.JavaConverters._
 import play.api.Logger
@@ -13,168 +16,118 @@ import scala.collection.mutable
 
 class CreateReward @Inject()(networkIObject: NetworkIObject, explorer: Explorer){
   private val logger: Logger = Logger(this.getClass)
-  def sendErg(address: String, sendTransaction: Boolean = true): String = {
+
+  def sendAsset(address: String, proxy_info: (Address, BigInteger), assetConfig: AssetConfig, sendTransaction: Boolean = true): String = {
     validateAddress(address)
     var txId = ""
-    def createProxyBox(proxyBox: (Long, Seq[InputBox], Seq[ErgoToken])): OutBox = {
+    def createProxyBox(proxyData: (Seq[InputBox], Long, mutable.Map[String, Long])): OutBox = {
       networkIObject.getCtxClient(implicit ctx => {
         val txB = ctx.newTxBuilder()
         var newProxyBox = txB.outBoxBuilder()
-        newProxyBox = newProxyBox.value(proxyBox._1 - Conf.defaultAmount - Conf.defaultTxFee)
-        if (proxyBox._3.nonEmpty) newProxyBox = newProxyBox.tokens(proxyBox._3: _*)
-        newProxyBox.contract(new ErgoTreeContract(Conf.proxyAddress.getErgoAddress.script))
+        newProxyBox = newProxyBox.value(proxyData._2 - assetConfig.assets("erg") - Conf.defaultTxFee)
+        if (proxyData._3.nonEmpty) {
+          var tokens: Seq[ErgoToken] = Seq.empty
+          proxyData._3.foreach( token => {
+            if (assetConfig.assets.get(token._1).isDefined) {
+              if ((token._2 - assetConfig.assets(token._1)) > 0)
+                tokens = tokens :+ new ErgoToken(token._1, token._2 - assetConfig.assets(token._1))
+            }
+            else tokens =  tokens :+ new ErgoToken(token._1, token._2)
+          })
+          if (tokens.nonEmpty) newProxyBox = newProxyBox.tokens(tokens: _*)
+        }
+        newProxyBox.contract(new ErgoTreeContract(proxy_info._1.getErgoAddress.script))
         newProxyBox.build()
       })
     }
 
     def createRewardBox(): OutBox = {
+      val tokens = assetConfig.assets.filterNot(_._1 == "erg").map(asset => new ErgoToken(asset._1, asset._2)).toSeq
       networkIObject.getCtxClient(implicit ctx => {
         val txB = ctx.newTxBuilder()
         var newProxyBox = txB.outBoxBuilder()
-        newProxyBox = newProxyBox.value(Conf.defaultAmount)
+        newProxyBox = newProxyBox.value(assetConfig.assets("erg"))
+        if (tokens.nonEmpty) newProxyBox = newProxyBox.tokens(tokens: _*)
         newProxyBox.contract(new ErgoTreeContract(Address.create(address).getErgoAddress.script))
         newProxyBox.build()
       })
     }
 
-    def calValue(inBoxes: Seq[InputBox]): (Long, Seq[InputBox], Seq[ErgoToken]) = {
-      var inputValue: Long = 0
-      var tokens: Seq[ErgoToken] = Seq()
+    def calValue(inBoxes: Seq[InputBox]): (Seq[InputBox], Long, mutable.Map[String, Long], Boolean) = {
+      var totalInputValue: Long = 0
+      val totalInputAssets = mutable.Map.empty[String, Long]
       var boxes: Seq[InputBox] = Seq()
+
       for ( walletInput <- inBoxes) {
-        inputValue += walletInput.getValue
-        if (walletInput.getTokens.size() > 0) tokens = tokens ++ walletInput.getTokens.asScala
-        boxes = boxes ++ Seq(walletInput)
-        if (inputValue >= Conf.defaultAmount + Conf.defaultTxFee) return (inputValue, boxes, tokens)
+        if (walletInput.getTokens.size() > 0) {
+          walletInput.getTokens.asScala.foreach(token => totalInputAssets(token.getId.toString) = totalInputAssets.getOrElse(token.getId.toString, 0L) + token.getValue)
+        }
+        totalInputValue += walletInput.getValue
+        boxes :+= walletInput
+        val ergCondition = totalInputValue >= (assetConfig.assets("erg") + Conf.defaultTxFee)
+        val assetsCondition= assetConfig.assets.filterNot(_._1.equals("erg")).map(asset => {
+          if (totalInputAssets.get(asset._1).isDefined) totalInputAssets(asset._1) >= asset._2
+          else false
+        }).reduceOption(_&&_)
+        if (ergCondition && assetsCondition.getOrElse(true)) return (boxes, totalInputValue, totalInputAssets, true)
       }
-      (inputValue, boxes, tokens)
+      (Seq.empty, 0L, mutable.Map.empty[String, Long], false)
     }
 
-    val boxes = networkIObject.getUnspentBox(Conf.proxyAddress)
-    val unConfirmedBoxes = explorer.getUnconfirmedOutputsFor(Conf.proxyAddress.toString)
+    var selectedBox: (Seq[InputBox], Long, mutable.Map[String, Long]) = null
+    var outBoxes: Seq[InputBox] = Seq.empty
+    outBoxes = outBoxes ++ networkIObject.getUnspentBox(proxy_info._1)
+    val unConfirmedBoxes = explorer.getUnconfirmedOutputsFor(proxy_info._1.toString)
     val unConfirmedInputsBoxesIds = unConfirmedBoxes.map(_.id)
-    val boxesVal = calValue(boxes.filter(box => {
+    val boxesVal = calValue(outBoxes.filter(box => {
       !unConfirmedInputsBoxesIds.contains(box.getId.toString)
     }))
-
-    if (boxesVal._2.isEmpty) {
-      logger.info(s"please wait and try later")
-      throw new Throwable("please wait and try later")
-    }
-    else if (boxesVal._1 > 0){
-     networkIObject.getCtxClient(implicit ctx => {
-      val prover = ctx.newProverBuilder()
-        .withDLogSecret(Conf.proxySecret)
-        .build()
-      val outputs: Seq[OutBox] = Seq(createProxyBox(boxesVal), createRewardBox())
-      val txB = ctx.newTxBuilder()
-      val tx = txB.boxesToSpend(boxesVal._2.asJava)
-        .fee(Conf.defaultTxFee)
-        .outputs(outputs: _*)
-        .sendChangeTo(Conf.proxyAddress.getErgoAddress)
-        .build()
-      val signed = prover.sign(tx)
-      logger.debug(s"reward data ${signed.toJson(false)}")
-      txId = if (sendTransaction) ctx.sendTransaction(signed) else ""
-      logger.info(s"sending reward tx ${txId}")
-    })
-    }
-    else {
-      logger.info(s"there is not enough Erg")
-      throw new Throwable("there is not enough Erg")
-    }
-    txId
-  }
-  def sendDexToken(address: String, sendTransaction: Boolean = true): String = {
-    validateAddress(address)
-    var txId = ""
-    def createProxyBox(proxyBox: InputBox): OutBox = {
-      networkIObject.getCtxClient(implicit ctx => {
-        val txB = ctx.newTxBuilder()
-        var newProxyBox = txB.outBoxBuilder()
-        newProxyBox = newProxyBox.value(proxyBox.getValue - Conf.assets("erg") - Conf.defaultTxFee)
-        if (proxyBox.getTokens.asScala.nonEmpty) {
-          val tokens = proxyBox.getTokens.asScala.map(token => {
-            if (Conf.assets.get(token.getId.toString).isDefined)
-            new ErgoToken(token.getId, token.getValue - Conf.assets(token.getId.toString))
-            else token
-          })
-          newProxyBox = newProxyBox.tokens(tokens: _*)
-        }
-        newProxyBox.contract(new ErgoTreeContract(Conf.proxyAddress.getErgoAddress.script))
-        newProxyBox.build()
-      })
-    }
-
-    def createRewardBox(): OutBox = {
-      val tokens = Conf.assets.filterNot(_._1 == "erg").map(asset => new ErgoToken(asset._1, asset._2)).toSeq
-      networkIObject.getCtxClient(implicit ctx => {
-        val txB = ctx.newTxBuilder()
-        var newProxyBox = txB.outBoxBuilder()
-        newProxyBox = newProxyBox.value(Conf.assets("erg"))
-        newProxyBox = newProxyBox.tokens(tokens: _*)
-        newProxyBox.contract(new ErgoTreeContract(Address.create(address).getErgoAddress.script))
-        newProxyBox.build()
-      })
-    }
-
-    def calValue(inBoxes: Seq[InputBox]): Option[InputBox] = {
-      val selectedBox = inBoxes.find(box => {
-        val inputAssets = mutable.Map.empty[String, Long]
-        if (box.getTokens.size() > 0) {
-          box.getTokens.asScala.foreach(token => inputAssets(token.getId.toString) = inputAssets.getOrElse(token.getId.toString, 0L) + token.getValue)
-        }
-        val ergCondition = box.getValue >= Conf.assets("erg") + Conf.defaultTxFee
-        val assetCondition = Conf.assets.filterNot(x => x._1 == "erg").map(asset => {
-          if (inputAssets.get(asset._1).isDefined) {
-            if (inputAssets(asset._1) >= asset._2) true
-            else false
+    if (!boxesVal._4) {
+      outBoxes = Seq.empty
+      var inBoxIds: Seq[String] = Seq.empty
+      val unconfirmedTxs = explorer.getUnconfirmedTransactionFor(proxy_info._1.toString)
+      unconfirmedTxs.foreach(tx => {
+        if (Conf.addressEncoder.fromProposition(tx.getOutputsToSpend.get(0).getErgoTree).get.toString == proxy_info._1.toString) {
+          val box = calValue(Seq(tx.getOutputsToSpend.get(0)))
+          if (box._1.nonEmpty) {
+            outBoxes = outBoxes ++ box._1
+            inBoxIds = inBoxIds :+ tx.getSignedInputs.get(0).getId.toString
           }
-          else false
-        }).reduce(_ && _)
-        ergCondition && assetCondition
+        }
       })
-      selectedBox
-    }
-    var boxToSpend: InputBox= null
-    val boxes = networkIObject.getUnspentBox(Conf.proxyAddress)
-    val unConfirmedBoxes = explorer.getUnconfirmedOutputsFor(Conf.proxyAddress.toString)
-    val unConfirmedInputsBoxesIds = unConfirmedBoxes.map(_.id)
-    val inp = boxes.filter(box => {
-      !unConfirmedInputsBoxesIds.contains(box.getId.toString)
-    })
-    val selectedConfirmedBox = calValue(inp)
-
-    if (selectedConfirmedBox.isEmpty) {
-      val unConfirmedTxs = explorer.getLastUnconfirmedTransactionFor(Conf.proxyAddress.toString)
-      val unConfirmedBoxes: Seq[InputBox] = unConfirmedTxs.get.getOutputsToSpend.asScala.filter(box => {
-          Conf.addressEncoder.fromProposition(box.getErgoTree).get.toString == Conf.proxyAddress.toString
-      })
-      val selectedUnConfirmedBox = calValue(unConfirmedBoxes)
-      if (selectedUnConfirmedBox.isEmpty) {
-        logger.info(s"there is not enough Erg or Token")
-        throw new Throwable("please wait and try later")
+      val noSpent = outBoxes.filterNot(box => inBoxIds.contains(box.getId.toString))
+      if (noSpent.isEmpty) {
+              logger.error(s"there is not enough Erg or Token for ${proxy_info._1}")
+              throw new WaitException
       }
-      else boxToSpend = selectedUnConfirmedBox.get
+      else {
+        val totalInputAssets = mutable.Map.empty[String, Long]
+        if (noSpent.head.getTokens.size() > 0) {
+          noSpent.head.getTokens.asScala.foreach(token => totalInputAssets(token.getId.toString) = totalInputAssets.getOrElse(token.getId.toString, 0L) + token.getValue)
+        }
+        selectedBox = (Seq(noSpent.head), noSpent.head.getValue, totalInputAssets)
+      }
     }
-    else {
-      boxToSpend = selectedConfirmedBox.get
-    }
-     networkIObject.getCtxClient(implicit ctx => {
+    else selectedBox = (boxesVal._1, boxesVal._2, boxesVal._3)
+    networkIObject.getCtxClient(implicit ctx => {
       val prover = ctx.newProverBuilder()
-        .withDLogSecret(Conf.proxySecret)
+        .withDLogSecret(proxy_info._2)
         .build()
-      val outputs: Seq[OutBox] = Seq(createProxyBox(boxToSpend), createRewardBox())
+      var outputs: Seq[OutBox] = Seq(createProxyBox(selectedBox), createRewardBox())
+      if (outputs.head.getValue == 0L) outputs = outputs.tail
       val txB = ctx.newTxBuilder()
-      val tx = txB.boxesToSpend(Seq(boxToSpend).asJava)
+      val tx = txB.boxesToSpend(selectedBox._1.asJava)
         .fee(Conf.defaultTxFee)
         .outputs(outputs: _*)
-        .sendChangeTo(Conf.proxyAddress.getErgoAddress)
+        .sendChangeTo(proxy_info._1.getErgoAddress)
         .build()
       val signed = prover.sign(tx)
       logger.debug(s"reward data ${signed.toJson(false)}")
-      txId = if (sendTransaction) ctx.sendTransaction(signed) else ""
-      logger.info(s"sending reward tx ${txId} to ${address}")
+      txId = if (sendTransaction) {
+        val result = ctx.sendTransaction(signed)
+        if (result == null) throw new WaitException else result
+      } else ""
+      logger.info(s"sending asset ${assetConfig.name} with txId ${txId} from ${proxy_info._1.toString.substring(0, 6)} to ${address}")
     })
     txId
   }

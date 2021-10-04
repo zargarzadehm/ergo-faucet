@@ -18,7 +18,8 @@ libraryDependencies ++= Seq(
   "org.ergoplatform" %% "ergo-appkit" % "4.0.4",
   "com.h2database" % "h2" % "1.4.200",
   "com.typesafe.play" %% "play-slick" % "4.0.0",
-  "com.typesafe.play" %% "play-slick-evolutions" % "4.0.0"
+  "com.typesafe.play" %% "play-slick-evolutions" % "4.0.0",
+    "com.dripower" %% "play-circe" % "2712.0"
 )
 
 assemblyJarName in assembly := s"${name.value}-${version.value}.jar"

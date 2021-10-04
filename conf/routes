@@ -1,3 +1,8 @@
-GET         /payment/address/:address              controllers.Controller.ergPayment(address: String)
-GET         /payment/dexToken/address/:address              controllers.Controller.dexTokenPayment(address: String)
+GET         /                    controllers.Controller.index
+GET         /supportedAssets     controllers.Controller.supportedAssets
+GET         /info                controllers.Controller.info
+POST        /getAsset            controllers.Controller.assetPayment
 
+GET         /*file               controllers.Controller.assetOrDefault(file)
+# Map static resources from the /public folder to the /assets URL path
+GET         /assets/*file        controllers.Assets.versioned(path="/public", file: Asset)
