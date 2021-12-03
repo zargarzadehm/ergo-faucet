@@ -53,6 +53,7 @@ object Conf {
   ergoProxyConfig.keys.foreach(info => proxyInfos(Address.create(info)) = BigInt(ergoProxyConfig.get[String](info), 16).bigInteger)
 
   lazy val defaultTxFee: Long = readKey("fee.default", "1000000L").toLong
+  lazy val minErg: Long = 100000L
 
   def readKey(key: String, default: String = null): String = {
     try {

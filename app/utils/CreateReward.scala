@@ -64,7 +64,7 @@ class CreateReward @Inject()(networkIObject: NetworkIObject, explorer: Explorer)
         }
         totalInputValue += walletInput.getValue
         boxes :+= walletInput
-        val ergCondition = totalInputValue >= (assetConfig.assets("erg") + Conf.defaultTxFee)
+        val ergCondition = totalInputValue >= (assetConfig.assets("erg") + Conf.defaultTxFee + Conf.minErg)
         val assetsCondition= assetConfig.assets.filterNot(_._1.equals("erg")).map(asset => {
           if (totalInputAssets.get(asset._1).isDefined) totalInputAssets(asset._1) >= asset._2
           else false
