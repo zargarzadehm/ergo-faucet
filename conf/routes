@@ -3,6 +3,8 @@ GET         /supportedAssets     controllers.Controller.supportedAssets
 GET         /info                controllers.Controller.info
 POST        /getAsset            controllers.Controller.assetPayment
 
+GET         /auth                controllers.Controller.auth(code: String ?= "")
+
 GET         /*file               controllers.Controller.assetOrDefault(file)
 # Map static resources from the /public folder to the /assets URL path
 GET         /assets/*file        controllers.Assets.versioned(path="/public", file: Asset)

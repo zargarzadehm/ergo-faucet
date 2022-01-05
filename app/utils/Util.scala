@@ -4,6 +4,7 @@ import java.io.{PrintWriter, StringWriter}
 import java.math.BigInteger
 import java.security.SecureRandom
 
+import dao.{SessionDAO, UserDAO}
 import org.ergoplatform.appkit.Address
 import play.api.Logger
 import play.api.libs.json._
@@ -12,6 +13,8 @@ import scalaj.http.Http
 import scala.collection.mutable
 
 object Util {
+
+  var DAOs: Option[(UserDAO, SessionDAO)] = Option.empty
 
   def getStackTraceStr(e: Throwable): String = {
     val sw = new StringWriter
@@ -28,6 +31,9 @@ object Util {
   final case class WaitException(private val message: String = "please wait and try later") extends Throwable(message)
   final case class InvalidAddressException(private val message: String = "Invalid withdraw address") extends Throwable(message)
   final case class InvalidRecaptchaException(private val message: String = "Invalid recaptcha") extends Throwable(message)
+  final case class AuthException(private val message: String = "Authenticate Failed") extends Throwable(message)
+  final case class NotVerifiedException(private val message: String = "Your discord account don't verified") extends Throwable(message)
+  final case class DuplicateRequestException(private val message: String = s"This user has already received assets") extends Throwable(message)
 
   def validateAddress(address: String): Boolean = {
     try{

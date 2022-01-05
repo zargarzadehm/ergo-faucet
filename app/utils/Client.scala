@@ -1,11 +1,12 @@
 package utils
 
+import dao.{SessionDAO, UserDAO}
 import javax.inject.Inject
 import org.ergoplatform.appkit.RestApiErgoClient
 import play.api.Logger
 
 
-class Client @Inject()(networkIObject: NetworkIObject) {
+class Client @Inject()(networkIObject: NetworkIObject, sessionDao: SessionDAO, userDAO: UserDAO) {
   private val logger: Logger = Logger(this.getClass)
   private val defaultHeader: Seq[(String, String)] = Seq[(String, String)](("Content-Type", "application/json"))
 
@@ -26,5 +27,9 @@ class Client @Inject()(networkIObject: NetworkIObject) {
         logger.error(s"Could not set client! ${e.getMessage}.")
         0L
     }
+  }
+
+  def setDAOs(): Unit = {
+    Util.DAOs = Option((userDAO, sessionDao))
   }
 }
