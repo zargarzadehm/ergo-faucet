@@ -34,6 +34,8 @@ class Controller @Inject()(action: UserAction, actionOptional: UserActionOptiona
 
   def index: Action[AnyContent] = assets.at("index.html")
 
+  def oathRedirect: Action[AnyContent] = assets.at("oauth.html")
+
   def assetOrDefault(resource: String): Action[AnyContent] = {
     if (resource.contains(".")) assets.at(resource) else index
   }
@@ -59,10 +61,10 @@ class Controller @Inject()(action: UserAction, actionOptional: UserActionOptiona
       request.user match {
         case Some(user) =>
           val userData =
-          s"""{\"email\": \"${user.email}\",
-              |\"username\": \"${user.username}\",
-              |\"id\": \"${user.discordId}\",
-              |\"verified\": ${user.verified}}""".stripMargin
+            s"""{\"email\": \"${user.email}\",
+               |\"username\": \"${user.username}\",
+               |\"id\": \"${user.discordId}\",
+               |\"verified\": ${user.verified}}""".stripMargin
           buttonString += s"""\"user\": ${userData}"""
         case None =>
           buttonString += s"""\"oauthUrl\": \"${Conf.discordConf.oauthLink}\""""
@@ -116,9 +118,9 @@ class Controller @Inject()(action: UserAction, actionOptional: UserActionOptiona
         if (txId.nonEmpty) {
           paymentTokenDao.insertConsiderOldPayment(TokenPayment(request.user.username, address, Conf.ergoAssets(assetId.toInt).assets("erg"), Conf.ergoAssets(assetId.toInt).name, txId))
           Ok(
-          s"""{
-             |  "txId": "${Conf.explorerFrontUrl}/en/transactions/${txId}"
-             |}""".stripMargin
+            s"""{
+               |  "txId": "${Conf.explorerFrontUrl}/en/transactions/${txId}"
+               |}""".stripMargin
           ).as("application/json")
         }
         else throw WaitException()
@@ -142,7 +144,7 @@ class Controller @Inject()(action: UserAction, actionOptional: UserActionOptiona
         val userInfo = Discord.getUserData(discordToken).getOrElse(throw AuthException())
         discordToken = discordToken.copy(userInfo.username)
         sessionDao.insertUserSession(discordToken, userInfo)
-        Redirect("/").withSession(request.session ++ DiscordTokenObj.unapply(discordToken))
+        Redirect("/oauth").withSession(request.session ++ DiscordTokenObj.unapply(discordToken))
       }
       else {
         Redirect(Conf.discordConf.oauthLink)

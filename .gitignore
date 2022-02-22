@@ -3,7 +3,8 @@ logs
 project/project
 project/target
 target
-public
+!public/oauth.html
+public/*
 tmp
 .history
 dist
