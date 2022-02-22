@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Redirecting...</title>
+
+</head>
+<body>
+<script type="text/javascript">
+    window.onload = (event) => {
+        window.opener.postMessage("Authenticated!", "*");
+        window.close();
+    }
+</script>
+</body>
+</html>
