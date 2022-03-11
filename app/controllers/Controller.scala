@@ -5,13 +5,16 @@ import utils.Util._
 import utils.{Conf, CreateReward, Discord}
 import controllers.actions.{TokenAction, UserAction, UserActionOption}
 import dao._
-
 import akka.actor.ActorSystem
+
 import javax.inject._
 import play.api.Logger
 import play.api.mvc._
 import io.circe.Json
 import play.api.libs.circe.Circe
+import play.filters.csrf.CSRF
+
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
 @Singleton
@@ -147,10 +150,11 @@ class Controller @Inject()(userAction: UserAction, userActionOption: UserActionO
         println(discordToken)
         println(userInfo)
         sessionDao.insertUserSession(discordToken, userInfo)
-        val xzz = DiscordTokenObj.unapply(discordToken).toSeq
+        val csrfToken = CSRF.getToken.get.value
+        val newSession = (DiscordTokenObj.unapply(discordToken) ++ mutable.Map("csrfToken"-> csrfToken)).toSeq
         println(xzz)
         println(request.session ++ DiscordTokenObj.unapply(discordToken))
-        Redirect("/oauth").withSession(Session.emptyCookie ++ DiscordTokenObj.unapply(discordToken))
+        Redirect("/oauth").withSession(newSession:_*)
       }
       else {
         Redirect(Conf.discordConf.oauthLink)

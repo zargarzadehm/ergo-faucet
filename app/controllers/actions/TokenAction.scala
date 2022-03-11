@@ -4,8 +4,10 @@ import models.DiscordTokenObj
 import java.time.LocalDateTime
 import utils.{Discord, Util}
 import play.api.mvc._
+import play.filters.csrf.CSRF
 
 import javax.inject.Inject
+import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 
 class TokenAction @Inject() (parser: BodyParsers.Default)(implicit ec: ExecutionContext)
@@ -33,7 +35,8 @@ class TokenAction @Inject() (parser: BodyParsers.Default)(implicit ec: Execution
           val discordToken = Discord.getTokenOauth(refresh_token = validToken._3).get
           println(discordToken, user)
           DAOs._2.insertUserSession(discordToken, user.get)
-          newSession = Session.apply(DiscordTokenObj.unapply(discordToken).toMap)
+          val csrfToken = CSRF.getToken(request).get.value
+          newSession = Session.apply(DiscordTokenObj.unapply(discordToken).toMap) ++ mutable.Map("csrfToken" -> csrfToken)
         }
       }
       block(request).map(_.withSession(newSession))

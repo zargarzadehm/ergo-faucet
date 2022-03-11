@@ -76,11 +76,13 @@ object Conf {
   lazy val minErg: Long = 100000L
   lazy val minNumberAsset: Int = readKey(config, "min-number-asset", "30").toInt
   lazy val monitorThreadInterval: Int = readKey(config, "monitorThreadInterval", "1800").toInt
-  lazy val thresholdDayIgnorePayments: Long = readKey(config, "thresholdDayIgnorePayments", "5L").toLong
+  lazy val paymentMonitorThreadInterval: Long = readKey(config, "paymentMonitorThreadInterval", "86400").toLong
+  lazy val thresholdDayIgnorePayments: Long = readKey(config, "thresholdDayIgnorePayments", "5").toLong
 
   def readKey(config: Configuration, key: String, default: String = null): String = {
     try {
-      if(config.has(key)) config.getOptional[String](key).getOrElse(default)
+      if(config.has(key)) config.getOptional[String](key).get
+      else if(default.nonEmpty) default
       else throw config.reportError(key,s"${key} not found!")
     } catch {
         case ex: Throwable =>

@@ -14,18 +14,25 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class StartupService @Inject()(protected val dbConfigProvider: DatabaseConfigProvider, appLifecycle: ApplicationLifecycle,
-                               system: ActorSystem, client: Client, balanceMonitoring: BalanceMonitoring)
+                               system: ActorSystem, client: Client, balanceMonitoring: BalanceMonitoring, paymentMonitoring: PaymentMonitoring)
                               (implicit ec: ExecutionContext) extends HasDatabaseConfigProvider[JdbcProfile] {
 
   private val logger: Logger = Logger(this.getClass)
 
-  val jobs: ActorRef = system.actorOf(Props(new Jobs(balanceMonitoring)), "scheduler")
+  val jobs: ActorRef = system.actorOf(Props(new Jobs(balanceMonitoring, paymentMonitoring)), "scheduler")
 
   system.scheduler.scheduleAtFixedRate(
     initialDelay = 2.seconds,
     interval = Conf.monitorThreadInterval.seconds,
     receiver = jobs,
     message = Jobs.monitor
+  )
+
+  system.scheduler.scheduleAtFixedRate(
+    initialDelay = 2.seconds,
+    interval = Conf.paymentMonitorThreadInterval.seconds,
+    receiver = jobs,
+    message = Jobs.lastPayment
   )
 
 
