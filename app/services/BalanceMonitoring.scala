@@ -11,15 +11,15 @@ class BalanceMonitoring @Inject ()(explorer: Explorer) {
       val lastBalance = explorer.getConfirmedBalanceFor(pk._1.toString)
       Conf.allAssets.foreach(asset => {
         var message = ""
-        if (lastBalance.get(asset._1).isDefined){
-          if ((asset._2 * Conf.minNumberAsset) < lastBalance(asset._1)){
+        if (lastBalance.contains(asset._1)){
+          if ((asset._2 * Conf.minNumberAsset) > lastBalance(asset._1)){
             message = s"Please charge asset ${asset._1} current amount is ${lastBalance(asset._1)}"
           }
         }
         else {
           message = s"Please charge asset ${asset._1} current amount is 0"
         }
-        Discord.sendMessageToWebHook(message)
+        if (message.nonEmpty) Discord.sendMessageToWebHook(message)
       })
     })
   }
