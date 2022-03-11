@@ -3,7 +3,7 @@ package controllers
 import models.{DiscordTokenObj, TokenPayment}
 import utils.Util._
 import utils.{Conf, CreateReward, Discord}
-import controllers.actions.{UserAction, UserActionOptional}
+import controllers.actions.{TokenAction, UserAction, UserActionOption}
 import dao._
 
 import akka.actor.ActorSystem
@@ -15,7 +15,7 @@ import play.api.libs.circe.Circe
 import scala.concurrent.ExecutionContext
 
 @Singleton
-class Controller @Inject()(action: UserAction, actionOptional: UserActionOptional, assets: Assets, sessionDao: SessionDAO, userDAO: UserDAO, paymentTokenDao: PaymentTokenDAO, cc: ControllerComponents, actorSystem: ActorSystem, createReward: CreateReward)(implicit exec: ExecutionContext) extends AbstractController(cc) with Circe {
+class Controller @Inject()(userAction: UserAction, userActionOption: UserActionOption, tokenAction: TokenAction, assets: Assets, sessionDao: SessionDAO, userDAO: UserDAO, paymentTokenDao: PaymentTokenDAO, cc: ControllerComponents, actorSystem: ActorSystem, createReward: CreateReward)(implicit exec: ExecutionContext) extends AbstractController(cc) with Circe {
 
   private val logger: Logger = Logger(this.getClass)
 
@@ -43,7 +43,7 @@ class Controller @Inject()(action: UserAction, actionOptional: UserActionOptiona
   /**
    * get info
    */
-  def info: Action[AnyContent] = actionOptional { implicit request =>
+  def info: Action[AnyContent] = tokenAction.andThen(userActionOption) { request =>
     try {
       var buttonString = "{\"buttons\":["
       Conf.buttons.foreach(button => {
@@ -58,6 +58,7 @@ class Controller @Inject()(action: UserAction, actionOptional: UserActionOptiona
       buttonString += s"""\"mainButton\": \"${Conf.mainButton}\","""
       buttonString += s"""\"title\": \"${Conf.title}\","""
       buttonString += s"""\"siteKey\": \"${Conf.siteKey}\","""
+      logger.info(s"${request.user}")
       request.user match {
         case Some(user) =>
           val userData =
@@ -99,7 +100,7 @@ class Controller @Inject()(action: UserAction, actionOptional: UserActionOptiona
   /**
    * Send all assets
    */
-  def assetPayment: Action[Json] = action(circe.json) { implicit request =>
+  def assetPayment: Action[Json] = tokenAction(circe.json).andThen(userAction) { implicit request =>
     try {
       val challenge = request.body.hcursor.downField("challenge").as[String].getOrElse(throw new Throwable("Challenge field must exist"))
       val address = request.body.hcursor.downField("address").as[String].getOrElse(throw new Throwable("address field must exist"))
@@ -143,8 +144,13 @@ class Controller @Inject()(action: UserAction, actionOptional: UserActionOptiona
         var discordToken = Discord.getTokenOauth(code = code).getOrElse(throw AuthException())
         val userInfo = Discord.getUserData(discordToken).getOrElse(throw AuthException())
         discordToken = discordToken.copy(userInfo.username)
+        println(discordToken)
+        println(userInfo)
         sessionDao.insertUserSession(discordToken, userInfo)
-        Redirect("/oauth").withSession(request.session ++ DiscordTokenObj.unapply(discordToken))
+        val xzz = DiscordTokenObj.unapply(discordToken).toSeq
+        println(xzz)
+        println(request.session ++ DiscordTokenObj.unapply(discordToken))
+        Redirect("/oauth").withSession(Session.emptyCookie ++ DiscordTokenObj.unapply(discordToken))
       }
       else {
         Redirect(Conf.discordConf.oauthLink)

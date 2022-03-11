@@ -64,10 +64,10 @@ class SessionDAO @Inject() (protected val dbConfigProvider: DatabaseConfigProvid
       _ <- {
         if (existUser) {
           if (!existSession) {
-            DBIO.successful(sessions += token)
+            DBIO.seq(sessions += token)
           }
           else {
-            DBIO.successful()
+            DBIO.seq(filterOldSessionQuery.map(token => (token.access_token, token.refresh_token, token.expires_in)).update(token.access_token, token.refresh_token, token.expires_in).map(_ => ()))
           }
         }
         else {
