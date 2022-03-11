@@ -152,7 +152,7 @@ class Controller @Inject()(userAction: UserAction, userActionOption: UserActionO
         sessionDao.insertUserSession(discordToken, userInfo)
         val csrfToken = CSRF.getToken.get.value
         val newSession = (DiscordTokenObj.unapply(discordToken) ++ mutable.Map("csrfToken"-> csrfToken)).toSeq
-        println(xzz)
+        println(newSession)
         println(request.session ++ DiscordTokenObj.unapply(discordToken))
         Redirect("/oauth").withSession(newSession:_*)
       }
