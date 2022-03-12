@@ -164,4 +164,19 @@ class Controller @Inject()(userAction: UserAction, userActionOption: UserActionO
       case e: Throwable => badException(e)
     }
   }
+
+  /**
+   * clear session (logout)
+   */
+  def logout: Action[AnyContent] = Action { implicit request =>
+    try {
+      Ok(s"""{
+            |  "status": "ok"
+            |}""".stripMargin).as("application/json").withNewSession
+    }
+    catch {
+      case e: Throwable => badException(e)
+    }
+  }
+
 }
