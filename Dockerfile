@@ -1,4 +1,4 @@
-FROM node:12.14 as builder-front
+FROM node:16.14 as builder-front
 
 WORKDIR /usr/src/app
 COPY ./ergo-faucet-ui/package.json ./

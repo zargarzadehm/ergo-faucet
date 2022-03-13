@@ -1,21 +1,23 @@
 package controllers
 
-import models.{DiscordTokenObj, TokenPayment}
-import utils.Util._
-import utils.{Conf, CreateReward, Discord}
-import controllers.actions.{UserAction, UserActionOptional}
-import dao._
-
 import akka.actor.ActorSystem
 import javax.inject._
 import play.api.Logger
 import play.api.mvc._
 import io.circe.Json
 import play.api.libs.circe.Circe
+import play.filters.csrf.CSRF
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
+import models.{DiscordTokenObj, TokenPayment}
+import utils.Util._
+import utils.{Conf, CreateReward, Discord}
+import controllers.actions.{TokenAction, UserAction, UserActionOption}
+import dao._
+
 @Singleton
-class Controller @Inject()(action: UserAction, actionOptional: UserActionOptional, assets: Assets, sessionDao: SessionDAO, userDAO: UserDAO, paymentTokenDao: PaymentTokenDAO, cc: ControllerComponents, actorSystem: ActorSystem, createReward: CreateReward)(implicit exec: ExecutionContext) extends AbstractController(cc) with Circe {
+class Controller @Inject()(userAction: UserAction, userActionOption: UserActionOption, tokenAction: TokenAction, assets: Assets, sessionDao: SessionDAO, userDAO: UserDAO, paymentTokenDao: PaymentTokenDAO, cc: ControllerComponents, actorSystem: ActorSystem, createReward: CreateReward)(implicit exec: ExecutionContext) extends AbstractController(cc) with Circe {
 
   private val logger: Logger = Logger(this.getClass)
 
@@ -43,7 +45,7 @@ class Controller @Inject()(action: UserAction, actionOptional: UserActionOptiona
   /**
    * get info
    */
-  def info: Action[AnyContent] = actionOptional { implicit request =>
+  def info: Action[AnyContent] = tokenAction.andThen(userActionOption) { request =>
     try {
       var buttonString = "{\"buttons\":["
       Conf.buttons.foreach(button => {
@@ -99,7 +101,7 @@ class Controller @Inject()(action: UserAction, actionOptional: UserActionOptiona
   /**
    * Send all assets
    */
-  def assetPayment: Action[Json] = action(circe.json) { implicit request =>
+  def assetPayment: Action[Json] = tokenAction(circe.json).andThen(userAction) { implicit request =>
     try {
       val challenge = request.body.hcursor.downField("challenge").as[String].getOrElse(throw new Throwable("Challenge field must exist"))
       val address = request.body.hcursor.downField("address").as[String].getOrElse(throw new Throwable("address field must exist"))
@@ -144,7 +146,9 @@ class Controller @Inject()(action: UserAction, actionOptional: UserActionOptiona
         val userInfo = Discord.getUserData(discordToken).getOrElse(throw AuthException())
         discordToken = discordToken.copy(userInfo.username)
         sessionDao.insertUserSession(discordToken, userInfo)
-        Redirect("/oauth").withSession(request.session ++ DiscordTokenObj.unapply(discordToken))
+        val csrfToken = CSRF.getToken.get.value
+        val newSession = (DiscordTokenObj.unapply(discordToken) ++ mutable.Map("csrfToken"-> csrfToken)).toSeq
+        Redirect("/oauth").withSession(newSession:_*)
       }
       else {
         Redirect(Conf.discordConf.oauthLink)
@@ -154,4 +158,19 @@ class Controller @Inject()(action: UserAction, actionOptional: UserActionOptiona
       case e: Throwable => badException(e)
     }
   }
+
+  /**
+   * clear session (logout)
+   */
+  def logout: Action[AnyContent] = Action { implicit request =>
+    try {
+      Ok(s"""{
+            |  "status": "ok"
+            |}""".stripMargin).as("application/json").withNewSession
+    }
+    catch {
+      case e: Throwable => badException(e)
+    }
+  }
+
 }

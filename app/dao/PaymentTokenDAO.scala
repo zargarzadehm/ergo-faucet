@@ -41,7 +41,7 @@ trait PaymentTokenComponent { self: HasDatabaseConfigProvider[JdbcProfile] =>
     def created_time = column[LocalDateTime]("CREATED_TIME")
     def done = column[Boolean]("DONE")
     def * = (username, address, erg_amount, type_tokens, tx_id, created_time, done) <> (TokenPayment.tupled, TokenPayment.unapply)
-    def user_token = index("USER_TOKEN", (username, type_tokens), unique = true)
+    def user_token = index("USER_TOKEN_ARCHIVE", (username, type_tokens), unique = true)
   }
 
 }
@@ -70,7 +70,7 @@ class PaymentTokenDAO @Inject() (protected val dbConfigProvider: DatabaseConfigP
     val insertConsiderOldPayment = for {
       pays <- filterOldPayQuery.exists.result
       _ <- {
-        if (!pays) DBIO.successful(tokenPayments += pay)
+        if (!pays) DBIO.seq(tokenPayments += pay)
         else throw DuplicateRequestException(s"You has already received ${pay.typeTokens} token type")
       }
     } yield { }
