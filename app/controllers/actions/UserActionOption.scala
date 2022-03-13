@@ -1,13 +1,13 @@
 package controllers.actions
-import models.{DiscordTokenObj, User}
 
 import java.time.{LocalDateTime, ZoneOffset}
-import utils.{Discord, Util}
 import play.api.mvc._
-import utils.Util.NotVerifiedException
-
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
+
+import models.User
+import utils.Util
+import utils.Util.NotVerifiedException
 
 class UserRequestOption[A](val user: Option[User], request: Request[A]) extends WrappedRequest[A](request)
 
@@ -16,7 +16,6 @@ class UserActionOption @Inject() (val parser: BodyParsers.Default)(implicit val 
     with ActionTransformer[Request, UserRequestOption] {
 
   def transform[A](request: Request[A]): Future[UserRequestOption[A]] = Future.successful {
-    println("UserActionOption")
     val DAOs = Util.DAOs.get
     val sessionTokenOpt = request.session.get("access_token")
 

@@ -14,10 +14,8 @@ class TokenAction @Inject() (parser: BodyParsers.Default)(implicit ec: Execution
   extends ActionBuilderImpl(parser) {
   override def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[Result]): Future[Result] = {
     try {
-      println("TokenAction")
       val DAOs = Util.DAOs.get
       var newSession: Session = request.session
-      println(request.session)
 
       val token = request.session.get("access_token")
         .flatMap(token => DAOs._2.getSession(token))
@@ -27,13 +25,10 @@ class TokenAction @Inject() (parser: BodyParsers.Default)(implicit ec: Execution
         .map(_._1)
         .flatMap(DAOs._1.getUser)
 
-      println("token is:", token)
       if (user.isDefined && token.isDefined) {
-        println("token is:", token.get)
         val validToken = token.get
         if (LocalDateTime.now().isAfter(validToken._2)) {
           val discordToken = Discord.getTokenOauth(refresh_token = validToken._3).get
-          println(discordToken, user)
           DAOs._2.insertUserSession(discordToken, user.get)
           val csrfToken = CSRF.getToken(request).get.value
           newSession = Session.apply(DiscordTokenObj.unapply(discordToken).toMap) ++ mutable.Map("csrfToken" -> csrfToken)

@@ -1,9 +1,8 @@
 package services
 
-import dao.PaymentTokenDAO
-import utils.{Conf, Discord, Explorer}
-
 import javax.inject.{Inject, Singleton}
+
+import dao.PaymentTokenDAO
 
 @Singleton
 class PaymentMonitoring @Inject ()(paymentTokenDao: PaymentTokenDAO) {

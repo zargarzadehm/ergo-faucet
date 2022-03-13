@@ -1,21 +1,20 @@
 package controllers
 
-import models.{DiscordTokenObj, TokenPayment}
-import utils.Util._
-import utils.{Conf, CreateReward, Discord}
-import controllers.actions.{TokenAction, UserAction, UserActionOption}
-import dao._
 import akka.actor.ActorSystem
-
 import javax.inject._
 import play.api.Logger
 import play.api.mvc._
 import io.circe.Json
 import play.api.libs.circe.Circe
 import play.filters.csrf.CSRF
-
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
+
+import models.{DiscordTokenObj, TokenPayment}
+import utils.Util._
+import utils.{Conf, CreateReward, Discord}
+import controllers.actions.{TokenAction, UserAction, UserActionOption}
+import dao._
 
 @Singleton
 class Controller @Inject()(userAction: UserAction, userActionOption: UserActionOption, tokenAction: TokenAction, assets: Assets, sessionDao: SessionDAO, userDAO: UserDAO, paymentTokenDao: PaymentTokenDAO, cc: ControllerComponents, actorSystem: ActorSystem, createReward: CreateReward)(implicit exec: ExecutionContext) extends AbstractController(cc) with Circe {
@@ -61,7 +60,6 @@ class Controller @Inject()(userAction: UserAction, userActionOption: UserActionO
       buttonString += s"""\"mainButton\": \"${Conf.mainButton}\","""
       buttonString += s"""\"title\": \"${Conf.title}\","""
       buttonString += s"""\"siteKey\": \"${Conf.siteKey}\","""
-      logger.info(s"${request.user}")
       request.user match {
         case Some(user) =>
           val userData =
@@ -147,13 +145,9 @@ class Controller @Inject()(userAction: UserAction, userActionOption: UserActionO
         var discordToken = Discord.getTokenOauth(code = code).getOrElse(throw AuthException())
         val userInfo = Discord.getUserData(discordToken).getOrElse(throw AuthException())
         discordToken = discordToken.copy(userInfo.username)
-        println(discordToken)
-        println(userInfo)
         sessionDao.insertUserSession(discordToken, userInfo)
         val csrfToken = CSRF.getToken.get.value
         val newSession = (DiscordTokenObj.unapply(discordToken) ++ mutable.Map("csrfToken"-> csrfToken)).toSeq
-        println(newSession)
-        println(request.session ++ DiscordTokenObj.unapply(discordToken))
         Redirect("/oauth").withSession(newSession:_*)
       }
       else {
