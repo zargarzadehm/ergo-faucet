@@ -92,9 +92,11 @@ class PaymentTokenDAO @Inject() (protected val dbConfigProvider: DatabaseConfigP
    * @param type_tokens Type batch of assets
    * @return boolean result
    */
-  def exists(username: String, type_tokens: String): Boolean = {
-    val res = db.run(tokenPayments.filter(payment => payment.username === username && payment.type_tokens === type_tokens).exists.result)
-    Await.result(res, 5.second)
+  def exists(username: String, type_tokens: String, address: String): Boolean = {
+    val res = db.run(tokenPayments.filter(payment => {
+      (payment.address === address || payment.username === username) && (payment.type_tokens === type_tokens)
+    } ).exists.result)
+    Await.result(res, Duration.Inf)
   }
 
   /**
@@ -102,6 +104,6 @@ class PaymentTokenDAO @Inject() (protected val dbConfigProvider: DatabaseConfigP
    */
   def deleteAll(): Unit = {
     val res = db.run(tokenPayments.delete)
-    Await.result(res, 5.second)
+    Await.result(res, Duration.Inf)
   }
 }
