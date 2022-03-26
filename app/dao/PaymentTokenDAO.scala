@@ -92,7 +92,7 @@ class PaymentTokenDAO @Inject() (protected val dbConfigProvider: DatabaseConfigP
    * @param type_tokens Type batch of assets
    * @return boolean result
    */
-  def exists(username: String, type_tokens: String, address: String): Boolean = {
+  def exists(username: String, address: String, type_tokens: String): Boolean = {
     val res = db.run(tokenPayments.filter(payment => {
       (payment.address === address || payment.username === username) && (payment.type_tokens === type_tokens)
     } ).exists.result)

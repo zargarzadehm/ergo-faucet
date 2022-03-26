@@ -107,7 +107,7 @@ class Controller @Inject()(userAction: UserAction, userActionOption: UserActionO
       val address = request.body.hcursor.downField("address").as[String].getOrElse(throw new Throwable("address field must exist"))
       val assetId = request.body.hcursor.downField("assetId").as[String].getOrElse(throw new Throwable("assetId field must exist"))
       verifyRecaptcha(challenge)
-      if (paymentTokenDao.exists(request.user.username, Conf.ergoAssets(assetId.toInt).name)) {
+      if (paymentTokenDao.exists(request.user.username, address, Conf.ergoAssets(assetId.toInt).name)) {
         BadRequest(
           s"""{
              |  "message": "This address has already received ${Conf.ergoAssets(assetId.toInt).name} assets."
