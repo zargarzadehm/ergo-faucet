@@ -1,4 +1,4 @@
-FROM node:12.14 as builder-front
+FROM node:16.14 as builder-front
 
 WORKDIR /usr/src/app
 COPY ./ergo-faucet-ui/package.json ./
@@ -12,6 +12,7 @@ WORKDIR /ergo-faucet
 ADD ["./app", "/ergo-faucet/src/app"]
 ADD ["./conf", "/ergo-faucet/src/conf"]
 ADD ["./project", "/ergo-faucet/src/project"]
+ADD ["./public", "/ergo-faucet/src/public"]
 COPY build.sbt /ergo-faucet/src/
 WORKDIR /ergo-faucet/src/
 COPY --from=builder-front /usr/src/app/build/ ./public/

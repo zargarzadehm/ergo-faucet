@@ -6,6 +6,8 @@ import org.ergoplatform.appkit.SignedTransaction
 import play.api.libs.json._
 import scalaj.http.Http
 
+import scala.collection.mutable
+
 @Singleton
 class Explorer @Inject()(networkIObject: NetworkIObject) {
   private val defaultHeader: Seq[(String, String)] = Seq[(String, String)](("Content-Type", "application/json"), ("Accept", "application/json"))
@@ -23,6 +25,20 @@ class Explorer @Inject()(networkIObject: NetworkIObject) {
         }).filter(_.address.equals(address))
     })
     inputs
+  }
+
+  def getConfirmedBalanceFor(address: String): mutable.Map[String, Long] = try {
+    val res = Http(s"${Conf.explorerUrl}/api/v1/addresses/$address/balance/confirmed").headers(defaultHeader).asString
+    val assets = mutable.Map.empty[String, Long]
+    if(res.body == ""){
+      return assets
+    }
+    val js = Json.parse(res.body)
+    assets("erg") = (js \ "nanoErgs").as[Long]
+    (js \ "tokens").as[Seq[JsValue]].foreach(token => {
+      assets((token \ "tokenId").as[String]) = (token \ "amount").as[Long]
+    })
+    assets
   }
 
   def getUnconfirmedTransactionFor(address: String): Seq[SignedTransaction] = try {

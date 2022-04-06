@@ -9,7 +9,7 @@ erg = "1000000" // How much erg should be in each box?
 // What token (id) and how much of it should be in each box?
 00c5c3d5641206d570374c3b03fb1e6a67c19f4495bd97a48a7243a739ca3ad7 = "100000"
 ``` 
-
+ErgoFaucet address: ```9h3DjWYXLriAn5cox3CeCFGxngTY3JQpy9RwZwP4x1xYAjeSN1G```
 ## Setup Back-End Side
 ### Prerequisite
 #### OpenJDK 8+

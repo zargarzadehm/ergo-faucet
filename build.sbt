@@ -2,13 +2,14 @@ import sbt.Attributed
 
 name := "ergo-faucet"
 
-version := "1.0.0"
+version := "2.0.0"
 
 lazy val `ergoPayoutAuto` = (project in file(".")).enablePlugins(PlayScala)
 
-resolvers += "scalaz-bintray" at "https://dl.bintray.com/scalaz/releases"
-
-resolvers += "Akka Snapshot Repository" at "https://repo.akka.io/snapshots/"
+resolvers ++= Seq("Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/",
+  "SonaType" at "https://oss.sonatype.org/content/groups/public",
+  "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
+)
 
 scalaVersion := "2.12.2"
 

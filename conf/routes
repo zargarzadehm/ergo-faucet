@@ -1,7 +1,12 @@
 GET         /                    controllers.Controller.index
+GET         /oauth               controllers.Controller.oathRedirect
 GET         /supportedAssets     controllers.Controller.supportedAssets
 GET         /info                controllers.Controller.info
++nocsrf
 POST        /getAsset            controllers.Controller.assetPayment
+
+GET         /auth                controllers.Controller.auth(code: String ?= "")
+GET         /logout              controllers.Controller.logout
 
 GET         /*file               controllers.Controller.assetOrDefault(file)
 # Map static resources from the /public folder to the /assets URL path
