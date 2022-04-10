@@ -57,7 +57,7 @@ object Conf {
     val ergoAssetsTmp = mutable.Map.empty[String, Long]
     assetConfig.keys.filterNot(name=> name.equals("name")).foreach(asset => {
       ergoAssetsTmp(asset) = readKey(assetConfig, asset).toLong
-      if (allAssets.get(asset).isDefined) {
+      if (allAssets.contains(asset)) {
         allAssets(asset) = Math.max(allAssets(asset), readKey(assetConfig, asset).toLong)
       }
       else {
