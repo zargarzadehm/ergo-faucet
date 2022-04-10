@@ -81,7 +81,7 @@ class PaymentTokenDAO @Inject() (protected val dbConfigProvider: DatabaseConfigP
     val filterOldPayQuery = tokenPayments.filter( _.created_time < LocalDateTime.now().minusDays(Conf.thresholdDayIgnorePayments))
     val updateTablesQuery = for {
       oldPay <- filterOldPayQuery.result
-      _ <- DBIO.seq(tokenPaymentsArchive ++= oldPay, filterOldPayQuery.delete)
+      _ <- DBIO.seq(tokenPaymentsArchive ++= oldPay, filterOldPayQuery.delete).transactionally
     } yield { }
     Await.result(db.run(updateTablesQuery), Duration.Inf)
   }
