@@ -16,7 +16,7 @@ scalaVersion := "2.12.2"
 libraryDependencies ++= Seq(ehcache, ws, specs2 % Test, guice)
 libraryDependencies ++= Seq(
   "org.scalaj" %% "scalaj-http" % "2.4.2",
-  "org.ergoplatform" %% "ergo-appkit" % "4.0.4",
+  "org.ergoplatform" %% "ergo-appkit" % "4.0.8",
   "com.h2database" % "h2" % "1.4.200",
   "com.typesafe.play" %% "play-slick" % "4.0.0",
   "com.typesafe.play" %% "play-slick-evolutions" % "4.0.0",

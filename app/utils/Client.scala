@@ -17,7 +17,12 @@ class Client @Inject()(networkIObject: NetworkIObject, sessionDao: SessionDAO, u
    */
   def setClient(): Long = {
     try {
-      networkIObject.client = RestApiErgoClient.create(Conf.nodeUrl, Conf.networkType, "")
+      networkIObject.client = RestApiErgoClient.create(
+        Conf.nodeUrl,
+        Conf.networkType,
+        "",
+        RestApiErgoClient.getDefaultExplorerUrl(Conf.networkType)
+      )
       networkIObject.getCtxClient(implicit ctx => {
         ctx.getHeight
       })

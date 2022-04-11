@@ -36,7 +36,7 @@ class CreateReward @Inject()(networkIObject: NetworkIObject, explorer: Explorer)
           })
           if (tokens.nonEmpty) newProxyBox = newProxyBox.tokens(tokens: _*)
         }
-        newProxyBox.contract(new ErgoTreeContract(proxy_info._1.getErgoAddress.script))
+        newProxyBox.contract(new ErgoTreeContract(proxy_info._1.getErgoAddress.script, Conf.networkType))
         newProxyBox.build()
       })
     }
@@ -48,7 +48,7 @@ class CreateReward @Inject()(networkIObject: NetworkIObject, explorer: Explorer)
         var newProxyBox = txB.outBoxBuilder()
         newProxyBox = newProxyBox.value(assetConfig.assets("erg"))
         if (tokens.nonEmpty) newProxyBox = newProxyBox.tokens(tokens: _*)
-        newProxyBox.contract(new ErgoTreeContract(Address.create(address).getErgoAddress.script))
+        newProxyBox.contract(new ErgoTreeContract(Address.create(address).getErgoAddress.script, Conf.networkType))
         newProxyBox.build()
       })
     }
@@ -124,8 +124,14 @@ class CreateReward @Inject()(networkIObject: NetworkIObject, explorer: Explorer)
       val signed = prover.sign(tx)
       logger.debug(s"reward data ${signed.toJson(false)}")
       txId = if (sendTransaction) {
-        val result = ctx.sendTransaction(signed)
-        if (result == null) throw new WaitException else result
+        try {
+          ctx.sendTransaction(signed)
+        }
+        catch {
+          case e: Throwable =>
+            logger.error(s"error in sendTransaction $e")
+            throw new WaitException
+        }
       } else ""
       logger.info(s"sending asset ${assetConfig.name} with txId ${txId} from ${proxy_info._1.toString.substring(0, 6)} to ${address}")
     })
