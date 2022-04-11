@@ -41,7 +41,7 @@ trait PaymentTokenComponent { self: HasDatabaseConfigProvider[JdbcProfile] =>
     def created_time = column[LocalDateTime]("CREATED_TIME")
     def done = column[Boolean]("DONE")
     def * = (username, address, erg_amount, type_tokens, tx_id, created_time, done) <> (TokenPayment.tupled, TokenPayment.unapply)
-    def user_token = index("USER_TOKEN_ARCHIVE", (username, type_tokens), unique = true)
+    def user_token = index("USER_TOKEN_ARCHIVE", (username, type_tokens, created_time), unique = true)
   }
 
 }
@@ -81,7 +81,7 @@ class PaymentTokenDAO @Inject() (protected val dbConfigProvider: DatabaseConfigP
     val filterOldPayQuery = tokenPayments.filter( _.created_time < LocalDateTime.now().minusDays(Conf.thresholdDayIgnorePayments))
     val updateTablesQuery = for {
       oldPay <- filterOldPayQuery.result
-      _ <- DBIO.seq(tokenPaymentsArchive ++= oldPay, filterOldPayQuery.delete)
+      _ <- DBIO.seq(tokenPaymentsArchive ++= oldPay, filterOldPayQuery.delete).transactionally
     } yield { }
     Await.result(db.run(updateTablesQuery), Duration.Inf)
   }

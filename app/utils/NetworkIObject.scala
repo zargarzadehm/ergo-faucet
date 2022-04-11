@@ -28,7 +28,7 @@ class NetworkIObject @Inject()() {
    */
   def getUnspentBox(address: Address): List[InputBox] = {
     getCtxClient(ctx =>
-      ctx.getUnspentBoxesFor(address).asScala.toList
+      ctx.getCoveringBoxesFor(address, (1e9*1e8).toLong, Seq.empty.asJava).getBoxes.asScala.toList
     )
   }
 
