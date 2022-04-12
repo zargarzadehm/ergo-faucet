@@ -26,9 +26,10 @@ trait PaymentTokenComponent { self: HasDatabaseConfigProvider[JdbcProfile] =>
     def type_tokens = column[String]("TYPE_TOKENS")
     def tx_id = column[String]("TXID")
     def username = column[String]("USERNAME")
+    def ip = column[String]("IP")
     def created_time = column[LocalDateTime]("CREATED_TIME", O.Default(LocalDateTime.now()))
     def done = column[Boolean]("DONE", O.Default(false))
-    def * = (username, address, erg_amount, type_tokens, tx_id, created_time, done) <> (TokenPayment.tupled, TokenPayment.unapply)
+    def * = (username, address, erg_amount, type_tokens, ip, tx_id, created_time, done) <> (TokenPayment.tupled, TokenPayment.unapply)
     def user_token = index("USER_TOKEN", (username, type_tokens), unique = true)
   }
 
@@ -38,9 +39,10 @@ trait PaymentTokenComponent { self: HasDatabaseConfigProvider[JdbcProfile] =>
     def type_tokens = column[String]("TYPE_TOKENS")
     def tx_id = column[String]("TXID")
     def username = column[String]("USERNAME")
+    def ip = column[String]("IP")
     def created_time = column[LocalDateTime]("CREATED_TIME")
     def done = column[Boolean]("DONE")
-    def * = (username, address, erg_amount, type_tokens, tx_id, created_time, done) <> (TokenPayment.tupled, TokenPayment.unapply)
+    def * = (username, address, erg_amount, type_tokens, ip, tx_id, created_time, done) <> (TokenPayment.tupled, TokenPayment.unapply)
     def user_token = index("USER_TOKEN_ARCHIVE", (username, type_tokens, created_time), unique = true)
   }
 
@@ -92,9 +94,9 @@ class PaymentTokenDAO @Inject() (protected val dbConfigProvider: DatabaseConfigP
    * @param type_tokens Type batch of assets
    * @return boolean result
    */
-  def exists(username: String, address: String, type_tokens: String): Boolean = {
+  def exists(username: String, address: String, ip: String, type_tokens: String): Boolean = {
     val res = db.run(tokenPayments.filter(payment => {
-      (payment.address === address || payment.username === username) && (payment.type_tokens === type_tokens)
+      (payment.address === address || payment.username === username || payment.ip === ip) && (payment.type_tokens === type_tokens)
     } ).exists.result)
     Await.result(res, Duration.Inf)
   }

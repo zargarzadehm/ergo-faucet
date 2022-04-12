@@ -34,6 +34,7 @@ object Util {
   final case class AuthException(private val message: String = "Authenticate Failed") extends Throwable(message)
   final case class NotVerifiedException(private val message: String = "Your discord account don't verified") extends Throwable(message)
   final case class DuplicateRequestException(private val message: String = s"This user has already received assets") extends Throwable(message)
+  final case class NotValidIP(private val message: String = "Your IP is not valid") extends Throwable(message)
 
   def validateAddress(address: String): Boolean = {
     try{

@@ -28,7 +28,7 @@ class CreateReward @Inject()(networkIObject: NetworkIObject, explorer: Explorer)
         if (proxyData._3.nonEmpty) {
           var tokens: Seq[ErgoToken] = Seq.empty
           proxyData._3.foreach( token => {
-            if (assetConfig.assets.get(token._1).isDefined) {
+            if (assetConfig.assets.contains(token._1)) {
               if ((token._2 - assetConfig.assets(token._1)) > 0)
                 tokens = tokens :+ new ErgoToken(token._1, token._2 - assetConfig.assets(token._1))
             }
@@ -66,7 +66,7 @@ class CreateReward @Inject()(networkIObject: NetworkIObject, explorer: Explorer)
         boxes :+= walletInput
         val ergCondition = totalInputValue >= (assetConfig.assets("erg") + Conf.defaultTxFee + Conf.minErg)
         val assetsCondition= assetConfig.assets.filterNot(_._1.equals("erg")).map(asset => {
-          if (totalInputAssets.get(asset._1).isDefined) totalInputAssets(asset._1) >= asset._2
+          if (totalInputAssets.contains(asset._1)) totalInputAssets(asset._1) >= asset._2
           else false
         }).reduceOption(_&&_)
         if (ergCondition && assetsCondition.getOrElse(true)) return (boxes, totalInputValue, totalInputAssets, true)

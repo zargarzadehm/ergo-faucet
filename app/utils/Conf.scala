@@ -79,6 +79,8 @@ object Conf {
   lazy val paymentMonitorThreadInterval: Long = readKey(config, "paymentMonitorThreadInterval", "86400").toLong
   lazy val thresholdDayIgnorePayments: Long = readKey(config, "thresholdDayIgnorePayments", "5").toLong
 
+  lazy val ipField: String = readKey(config, "ip-field", "cf-connecting-ip")
+
   def readKey(config: Configuration, key: String, default: String = null): String = {
     try {
       if(config.has(key)) config.getOptional[String](key).get
