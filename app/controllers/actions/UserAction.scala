@@ -4,12 +4,11 @@ import java.time.{LocalDateTime, ZoneOffset}
 import scala.concurrent.{ExecutionContext, Future}
 import javax.inject._
 import play.api.mvc._
-
 import models.User
-import utils.Util.{AuthException, NotVerifiedException}
-import utils.Util
+import utils.Util.{AuthException, NotValidIP, NotVerifiedException}
+import utils.{Conf, Util}
 
-class UserRequest[A](val user: User, request: Request[A]) extends WrappedRequest[A](request)
+class UserRequest[A](val user: User, val ip: String, request: Request[A]) extends WrappedRequest[A](request)
 
 class UserAction @Inject() (val parser: BodyParsers.Default)(implicit val executionContext: ExecutionContext)
   extends ActionBuilder[UserRequest, AnyContent]
@@ -25,6 +24,7 @@ class UserAction @Inject() (val parser: BodyParsers.Default)(implicit val execut
       .flatMap(DAOs._1.getUser)
     val validUser = user.getOrElse(throw AuthException())
     if (!validUser.verified) throw NotVerifiedException()
-    new UserRequest(validUser, request)
+    val ip = request.headers.get(Conf.ipField).getOrElse(throw NotValidIP())
+    new UserRequest(validUser, ip, request)
   }
 }
