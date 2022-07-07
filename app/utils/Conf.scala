@@ -19,6 +19,7 @@ object Conf {
 
   private val discordConfig: Configuration = config.get[Configuration]("discord")
   lazy val discordConf: DiscordConfig = DiscordConfig(
+    readKey(discordConfig, "active", "true").toBoolean,
     readKey(discordConfig, "oauth-link"),
     readKey(discordConfig, "client-id"),
     readKey(discordConfig, "client-secret"),
