@@ -138,28 +138,19 @@ class Controller @Inject()(userAction: UserAction, userActionOption: UserActionO
                 }
             }
             else {
-                if (paymentTokenDao.exists(address, Conf.ergoAssets(assetId.toInt).name)) {
-                    BadRequest(
-                        s"""{
-                           |  "message": "This address has already received ${Conf.ergoAssets(assetId.toInt).name} assets."
-                           |}""".stripMargin
-                    ).as("application/json")
+                val proxy_info = selectRandomProxyInfo(Conf.proxyInfos)
+                responseTxId = createReward.sendAsset(address, proxy_info.get, Conf.ergoAssets(assetId.toInt)).replaceAll("\"", "")
+                if (responseTxId.nonEmpty) {
+                    paymentTokenDao.insertConsiderOldPayment(TokenPayment(
+                        "testnet-fake",
+                        address,
+                        Conf.ergoAssets(assetId.toInt).assets("erg"),
+                        Conf.ergoAssets(assetId.toInt).name,
+                        Some(request.ip),
+                        responseTxId
+                    ))
                 }
-                else {
-                    val proxy_info = selectRandomProxyInfo(Conf.proxyInfos)
-                    responseTxId = createReward.sendAsset(address, proxy_info.get, Conf.ergoAssets(assetId.toInt)).replaceAll("\"", "")
-                    if (responseTxId.nonEmpty) {
-                        paymentTokenDao.insertConsiderOldPayment(TokenPayment(
-                            "testnet-fake",
-                            address,
-                            Conf.ergoAssets(assetId.toInt).assets("erg"),
-                            Conf.ergoAssets(assetId.toInt).name,
-                            Some(request.ip),
-                            responseTxId
-                        ))
-                    }
-                    else throw WaitException()
-                }
+                else throw WaitException()
             }
             Ok(
                 s"""{
