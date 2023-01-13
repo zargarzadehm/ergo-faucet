@@ -49,10 +49,10 @@ object Util {
     val logger: Logger = Logger(this.getClass)
     try{
       val defaultHeader: Seq[(String, String)] = Seq[(String, String)](("Content-Type", "application/json"), ("Accept", "application/json"))
-      val res = Http(s"https://www.google.com/recaptcha/api/siteverify?secret=${Conf.recaptchaKey}&response=${challenge}").headers(defaultHeader).asString
+      val res = Http(s"https://www.google.com/recaptcha/api/siteverify?secret=${Conf.recaptchaKey}&response=$challenge").headers(defaultHeader).asString
       val js = Json.parse(res.body)
       if (!(js \ "success").as[Boolean]) {
-        logger.info(s"response of google ${js}")
+        logger.info(s"response of google $js")
         throw new InvalidRecaptchaException
       }
     } catch {

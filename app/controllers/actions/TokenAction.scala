@@ -12,7 +12,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class TokenAction @Inject() (parser: BodyParsers.Default)(implicit ec: ExecutionContext)
   extends ActionBuilderImpl(parser) {
-  override def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[Result]): Future[Result] = {
+  override def invokeBlock[A](request: Request[A], block: Request[A] => Future[Result]): Future[Result] = {
     try {
       val DAOs = Util.DAOs.get
       var newSession: Session = request.session

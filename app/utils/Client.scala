@@ -8,7 +8,6 @@ import play.api.Logger
 
 class Client @Inject()(networkIObject: NetworkIObject, sessionDao: SessionDAO, userDAO: UserDAO) {
   private val logger: Logger = Logger(this.getClass)
-  private val defaultHeader: Seq[(String, String)] = Seq[(String, String)](("Content-Type", "application/json"))
 
   /**
    * Sets client for the entire app when the app starts
