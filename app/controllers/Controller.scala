@@ -1,6 +1,5 @@
 package controllers
 
-import akka.actor.ActorSystem
 import javax.inject._
 import play.api.Logger
 import play.api.mvc._
@@ -17,7 +16,7 @@ import controllers.actions.{TokenAction, UserAction, UserActionOption}
 import dao._
 
 @Singleton
-class Controller @Inject()(userAction: UserAction, userActionOption: UserActionOption, tokenAction: TokenAction, assets: Assets, sessionDao: SessionDAO, userDAO: UserDAO, paymentTokenDao: PaymentTokenDAO, cc: ControllerComponents, actorSystem: ActorSystem, createReward: CreateReward)(implicit exec: ExecutionContext) extends AbstractController(cc) with Circe {
+class Controller @Inject()(userAction: UserAction, userActionOption: UserActionOption, tokenAction: TokenAction, assets: Assets, sessionDao: SessionDAO, paymentTokenDao: PaymentTokenDAO, cc: ControllerComponents, createReward: CreateReward)(implicit exec: ExecutionContext) extends AbstractController(cc) with Circe {
 
   private val logger: Logger = Logger(this.getClass)
 
@@ -67,7 +66,7 @@ class Controller @Inject()(userAction: UserAction, userActionOption: UserActionO
                |\"username\": \"${user.username}\",
                |\"id\": \"${user.discordId}\",
                |\"verified\": ${user.verified}}""".stripMargin
-          buttonString += s"""\"user\": ${userData}"""
+          buttonString += s"""\"user\": $userData"""
         case None =>
           buttonString += s"""\"oauthUrl\": \"${Conf.discordConf.oauthLink}\""""
       }
@@ -121,7 +120,7 @@ class Controller @Inject()(userAction: UserAction, userActionOption: UserActionO
           paymentTokenDao.insertConsiderOldPayment(TokenPayment(request.user.username, address, Conf.ergoAssets(assetId.toInt).assets("erg"), Conf.ergoAssets(assetId.toInt).name, request.ip, txId))
           Ok(
             s"""{
-               |  "txId": "${Conf.explorerFrontUrl}/en/transactions/${txId}"
+               |  "txId": "${Conf.explorerFrontUrl}/en/transactions/$txId"
                |}""".stripMargin
           ).as("application/json")
         }

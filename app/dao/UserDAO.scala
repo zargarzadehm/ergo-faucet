@@ -6,7 +6,7 @@ import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.JdbcProfile
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext}
 
 trait UserComponent { self: HasDatabaseConfigProvider[JdbcProfile] =>
   import profile.api._

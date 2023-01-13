@@ -13,7 +13,7 @@ case class User(discordId: String, username: String, email: String, verified: Bo
 object UserObj {
   def apply(discordId: String, username: String, discriminator: String, email: String, verified: Boolean): Option[User] ={
     try {
-      Option(User(discordId, s"${username}#${discriminator}", email, verified))
+      Option(User(discordId, s"$username#$discriminator", email, verified))
     }
     catch {
       case _: Any =>  Option.empty

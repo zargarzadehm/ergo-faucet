@@ -47,7 +47,7 @@ object Conf {
   lazy val explorerUrl: String = readKey(config, "explorer.url-back").replaceAll("/$", "")
   lazy val explorerFrontUrl: String = readKey(config, "explorer.url-front").replaceAll("/$", "")
 
-  var lastId = -1
+  var lastId: Int = -1
   var ergoAssets = mutable.Map.empty[Int, AssetConfig]
   var allAssets = mutable.Map.empty[String, Long]
   private val ergoAssetsConfig: Configuration = config.get[Configuration]("ergo-assets")
@@ -85,7 +85,7 @@ object Conf {
     try {
       if(config.has(key)) config.getOptional[String](key).get
       else if(default.nonEmpty) default
-      else throw config.reportError(key,s"${key} not found!")
+      else throw config.reportError(key,s"$key not found!")
     } catch {
         case ex: Throwable =>
           logger.error(ex.getMessage)

@@ -18,7 +18,7 @@ object Discord{
         "client_id" -> s"${Conf.discordConf.clientId}",
         "client_secret" -> s"${Conf.discordConf.clientSecret}",
         "grant_type" -> "authorization_code",
-        "code" -> s"${code}",
+        "code" -> s"$code",
         "redirect_uri" -> s"${Conf.discordConf.redirectUrl}"
       )
     }
@@ -59,7 +59,7 @@ object Discord{
       (js \ "verified").as[Boolean]
     )
   } catch {
-      case e: Throwable =>
+      case _: Throwable =>
         throw new Util.AuthException
   }
 
