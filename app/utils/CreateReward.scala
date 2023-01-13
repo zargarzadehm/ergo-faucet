@@ -4,13 +4,12 @@ import java.math.BigInteger
 
 import javax.inject.Inject
 import org.ergoplatform.appkit.impl.ErgoTreeContract
-import org.ergoplatform.appkit.{Address, ErgoToken, InputBox, JavaHelpers, OutBox}
+import org.ergoplatform.appkit.{Address, ErgoToken, InputBox, OutBox}
 import Util._
 import models.AssetConfig
 
 import scala.collection.JavaConverters._
 import play.api.Logger
-import scorex.util.encode.Base16
 
 import scala.collection.mutable
 
@@ -116,10 +115,10 @@ class CreateReward @Inject()(networkIObject: NetworkIObject, explorer: Explorer)
       var outputs: Seq[OutBox] = Seq(createProxyBox(selectedBox), createRewardBox())
       if (outputs.head.getValue == 0L) outputs = outputs.tail
       val txB = ctx.newTxBuilder()
-      val tx = txB.boxesToSpend(selectedBox._1.asJava)
+      val tx = txB.addInputs(selectedBox._1: _*)
         .fee(Conf.defaultTxFee)
-        .outputs(outputs: _*)
-        .sendChangeTo(proxy_info._1.getErgoAddress)
+        .addOutputs(outputs: _*)
+        .sendChangeTo(proxy_info._1)
         .build()
       val signed = prover.sign(tx)
       logger.debug(s"reward data ${signed.toJson(false)}")
@@ -133,7 +132,7 @@ class CreateReward @Inject()(networkIObject: NetworkIObject, explorer: Explorer)
             throw new WaitException
         }
       } else ""
-      logger.info(s"sending asset ${assetConfig.name} with txId ${txId} from ${proxy_info._1.toString.substring(0, 6)} to ${address}")
+      logger.info(s"sending asset ${assetConfig.name} with txId $txId from ${proxy_info._1.toString.substring(0, 6)} to $address")
     })
     txId
   }

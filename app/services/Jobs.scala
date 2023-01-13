@@ -12,7 +12,7 @@ class Jobs(balanceMonitoring: BalanceMonitoring, paymentMonitoring: PaymentMonit
   extends Actor with ActorLogging {
   private val logger: Logger = Logger(this.getClass)
 
-  def receive = {
+  def receive: Receive = {
     case Jobs.monitor =>
       logger.info(s"Monitoring of Faucet balance started")
       balanceMonitoring.monitor()

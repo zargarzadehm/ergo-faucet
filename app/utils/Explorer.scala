@@ -56,8 +56,8 @@ class Explorer @Inject()(networkIObject: NetworkIObject) {
       return Seq.empty
     }
     (js \ "items").as[Seq[JsValue]].foreach(tx => {
-      val outStinrg = tx.toString().substring(0, 2) + "id" + tx.toString().substring(7)
-      unconfirmedTx = unconfirmedTx :+ ctx.signedTxFromJson(outStinrg)
+      val outString = tx.toString().substring(0, 2) + "id" + tx.toString().substring(7)
+      unconfirmedTx = unconfirmedTx :+ ctx.signedTxFromJson(outString)
     })
      unconfirmedTx
     })
