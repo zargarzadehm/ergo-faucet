@@ -20,7 +20,7 @@ class Client @Inject()(networkIObject: NetworkIObject, sessionDao: SessionDAO, u
         Conf.nodeUrl,
         Conf.networkType,
         "",
-        RestApiErgoClient.getDefaultExplorerUrl(Conf.networkType)
+        Conf.explorerUrl
       )
       networkIObject.getCtxClient(implicit ctx => {
         ctx.getHeight
