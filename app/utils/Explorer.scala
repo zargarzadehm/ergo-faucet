@@ -13,7 +13,7 @@ class Explorer @Inject()(networkIObject: NetworkIObject) {
   private val defaultHeader: Seq[(String, String)] = Seq[(String, String)](("Content-Type", "application/json"), ("Accept", "application/json"))
 
   def getUnconfirmedOutputsFor(address: String): Seq[Box] = try {
-    val res = Http(s"${Conf.explorerUrl}/transactions/unconfirmed/byAddress/$address").headers(defaultHeader).asString
+    val res = Http(s"${Conf.explorerUrl}/api/v0/transactions/unconfirmed/byAddress/$address").headers(defaultHeader).asString
     if(res.body == ""){
       return Seq()
     }
@@ -42,7 +42,7 @@ class Explorer @Inject()(networkIObject: NetworkIObject) {
   }
 
   def getUnconfirmedTransactionFor(address: String): Seq[SignedTransaction] = try {
-    val res = Http(s"${Conf.explorerUrl}/transactions/unconfirmed/byAddress/$address").headers(defaultHeader).asString
+    val res = Http(s"${Conf.explorerUrl}/api/v0/transactions/unconfirmed/byAddress/$address").headers(defaultHeader).asString
     if(res.body == ""){
       return Seq.empty
     }
