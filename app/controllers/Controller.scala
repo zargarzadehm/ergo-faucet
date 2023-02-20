@@ -24,10 +24,12 @@ class Controller @Inject()(userAction: UserAction, userActionOption: UserActionO
     logger.info(s"error in controller ${e.getMessage}")
     Ok(s"""{"success": false, "message": "${e.getMessage}"}""").as("application/json")
   }
+
   def badException(e: Throwable): Result = {
     logger.error(s"error in controller ${getStackTraceStr(e)}")
     Ok(s"""{"success": false, "message": "${e.getMessage}"}""").as("application/json")
   }
+
   def medException(e: Throwable): Result = {
     logger.info(s"error in controller ${e.getMessage}")
     BadRequest(s"""{"success": false, "message": "${e.getMessage}"}""").as("application/json")
@@ -54,21 +56,23 @@ class Controller @Inject()(userAction: UserAction, userActionOption: UserActionO
              |\"url\": \"${button.url}\"},""".stripMargin
         buttonString += res
       })
-      buttonString = buttonString.substring(0, buttonString.length-1)
+      buttonString = buttonString.substring(0, buttonString.length - 1)
       buttonString += "],"
       buttonString += s"""\"mainButton\": \"${Conf.mainButton}\","""
       buttonString += s"""\"title\": \"${Conf.title}\","""
       buttonString += s"""\"siteKey\": \"${Conf.siteKey}\","""
+      buttonString += s"""\"discordRequired\": ${Conf.discordConf.active}"""
       request.user match {
         case Some(user) =>
           val userData =
-            s"""{\"email\": \"${user.email}\",
+            s""", {\"email\": \"${user.email}\",
                |\"username\": \"${user.username}\",
                |\"id\": \"${user.discordId}\",
                |\"verified\": ${user.verified}}""".stripMargin
-          buttonString += s"""\"user\": $userData"""
+          buttonString += s"""\"user\": ${userData}"""
         case None =>
-          buttonString += s"""\"oauthUrl\": \"${Conf.discordConf.oauthLink}\""""
+          if (Conf.discordConf.active)
+            buttonString += s""", \"oauthUrl\": \"${Conf.discordConf.oauthLink}\""""
       }
       buttonString += "}"
       Ok(s"""$buttonString""".stripMargin).as("application/json")
@@ -88,7 +92,7 @@ class Controller @Inject()(userAction: UserAction, userActionOption: UserActionO
         val res = s"""\"${asset._1}\": \"${asset._2.name}\","""
         assetString += res
       })
-      assetString = assetString.substring(0, assetString.length-1)
+      assetString = assetString.substring(0, assetString.length - 1)
       assetString += "}"
       Ok(s"""$assetString""".stripMargin).as("application/json")
     }
@@ -105,27 +109,54 @@ class Controller @Inject()(userAction: UserAction, userActionOption: UserActionO
       val challenge = request.body.hcursor.downField("challenge").as[String].getOrElse(throw new Throwable("Challenge field must exist"))
       val address = request.body.hcursor.downField("address").as[String].getOrElse(throw new Throwable("address field must exist"))
       val assetId = request.body.hcursor.downField("assetId").as[String].getOrElse(throw new Throwable("assetId field must exist"))
+      var responseTxId: String = ""
       verifyRecaptcha(challenge)
-      if (paymentTokenDao.exists(request.user.username, address, request.ip, Conf.ergoAssets(assetId.toInt).name)) {
-        BadRequest(
-          s"""{
-             |  "message": "This address has already received ${Conf.ergoAssets(assetId.toInt).name} assets."
-             |}""".stripMargin
-        ).as("application/json")
-      }
-      else {
-        val proxy_info = selectRandomProxyInfo(Conf.proxyInfos)
-        val txId = createReward.sendAsset(address, proxy_info.get, Conf.ergoAssets(assetId.toInt)).replaceAll("\"", "")
-        if (txId.nonEmpty) {
-          paymentTokenDao.insertConsiderOldPayment(TokenPayment(request.user.username, address, Conf.ergoAssets(assetId.toInt).assets("erg"), Conf.ergoAssets(assetId.toInt).name, request.ip, txId))
-          Ok(
+      if (Conf.discordConf.active) {
+        val user = request.user.get
+        if (paymentTokenDao.exists(user.username, address, request.ip, Conf.ergoAssets(assetId.toInt).name)) {
+          BadRequest(
             s"""{
-               |  "txId": "${Conf.explorerFrontUrl}/en/transactions/$txId"
+               |  "message": "This address has already received ${Conf.ergoAssets(assetId.toInt).name} assets."
                |}""".stripMargin
           ).as("application/json")
         }
+        else {
+          val proxy_info = selectRandomProxyInfo(Conf.proxyInfos)
+          responseTxId = createReward.sendAsset(address, proxy_info.get, Conf.ergoAssets(assetId.toInt)).replaceAll("\"", "")
+          if (responseTxId.nonEmpty) {
+            paymentTokenDao.insertConsiderOldPayment(TokenPayment(
+              user.username,
+              address,
+              Conf.ergoAssets(assetId.toInt).assets("erg"),
+              Conf.ergoAssets(assetId.toInt).name,
+              Some(request.ip),
+              responseTxId
+            ))
+          }
+          else throw WaitException()
+        }
+      }
+      else {
+        val proxy_info = selectRandomProxyInfo(Conf.proxyInfos)
+        responseTxId = createReward.sendAsset(address, proxy_info.get, Conf.ergoAssets(assetId.toInt)).replaceAll("\"", "")
+        if (responseTxId.nonEmpty) {
+          paymentTokenDao.insertConsiderOldPayment(TokenPayment(
+            "testnet-fake",
+            address,
+            Conf.ergoAssets(assetId.toInt).assets("erg"),
+            Conf.ergoAssets(assetId.toInt).name,
+            Some(request.ip),
+            responseTxId
+          ))
+        }
         else throw WaitException()
       }
+      Ok(
+        s"""{
+           |  "txId": "${Conf.explorerFrontUrl}/en/transactions/${responseTxId}"
+           |}""".stripMargin
+      ).as("application/json")
+
     } catch {
       case e: WaitException => okException(e)
       case e: InvalidAddressException => medException(e)
@@ -138,16 +169,16 @@ class Controller @Inject()(userAction: UserAction, userActionOption: UserActionO
   /**
    * Discord oauth2 authentication
    */
-  def auth(code: String) : Action[AnyContent] = Action { implicit request =>
+  def auth(code: String): Action[AnyContent] = Action { implicit request =>
     try {
-      if (code.nonEmpty){
+      if (code.nonEmpty) {
         var discordToken = Discord.getTokenOauth(code = code).getOrElse(throw AuthException())
         val userInfo = Discord.getUserData(discordToken).getOrElse(throw AuthException())
         discordToken = discordToken.copy(userInfo.username)
         sessionDao.insertUserSession(discordToken, userInfo)
         val csrfToken = CSRF.getToken.get.value
-        val newSession = (DiscordTokenObj.unapply(discordToken) ++ mutable.Map("csrfToken"-> csrfToken)).toSeq
-        Redirect("/oauth").withSession(newSession:_*)
+        val newSession = (DiscordTokenObj.unapply(discordToken) ++ mutable.Map("csrfToken" -> csrfToken)).toSeq
+        Redirect("/oauth").withSession(newSession: _*)
       }
       else {
         Redirect(Conf.discordConf.oauthLink)
@@ -163,9 +194,10 @@ class Controller @Inject()(userAction: UserAction, userActionOption: UserActionO
    */
   def logout: Action[AnyContent] = Action { implicit request =>
     try {
-      Ok(s"""{
-            |  "status": "ok"
-            |}""".stripMargin).as("application/json").withNewSession
+      Ok(
+        s"""{
+           |  "status": "ok"
+           |}""".stripMargin).as("application/json").withNewSession
     }
     catch {
       case e: Throwable => badException(e)

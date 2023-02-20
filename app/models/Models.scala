@@ -8,7 +8,7 @@ import play.api.mvc.Session
 import scala.collection.mutable
 
 case class Payment(address: String, amount: Long, txid: String)
-case class TokenPayment(username: String, address: String, amount: Long, typeTokens: String, ip: String, txid: String, createdTime: LocalDateTime = LocalDateTime.now(), done: Boolean = false)
+case class TokenPayment(username: String, address: String, amount: Long, typeTokens: String, ip: Option[String], txid: String, createdTime: LocalDateTime = LocalDateTime.now(), done: Boolean = false)
 case class User(discordId: String, username: String, email: String, verified: Boolean)
 object UserObj {
   def apply(discordId: String, username: String, discriminator: String, email: String, verified: Boolean): Option[User] ={
@@ -64,5 +64,5 @@ object DiscordTokenObj {
 case class AssetConfig(name: String, assets: mutable.Map[String, Long])
 case class ButtonConfig(name: String, active: Boolean, url: String)
 
-case class DiscordConfig(oauthLink: String, clientId: String, clientSecret: String, redirectUrl: String,
+case class DiscordConfig(active: Boolean, oauthLink: String, clientId: String, clientSecret: String, redirectUrl: String,
                          tokenUrl: String, informationUrl: String, webHookUrl: String)

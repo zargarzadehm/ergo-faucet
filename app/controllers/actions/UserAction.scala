@@ -8,23 +8,26 @@ import models.User
 import utils.Util.{AuthException, NotValidIP, NotVerifiedException}
 import utils.{Conf, Util}
 
-class UserRequest[A](val user: User, val ip: String, request: Request[A]) extends WrappedRequest[A](request)
+class UserRequest[A](val user: Option[User], val ip: String, request: Request[A]) extends WrappedRequest[A](request)
 
-class UserAction @Inject() (val parser: BodyParsers.Default)(implicit val executionContext: ExecutionContext)
+class UserAction @Inject()(val parser: BodyParsers.Default)(implicit val executionContext: ExecutionContext)
   extends ActionBuilder[UserRequest, AnyContent]
     with ActionTransformer[Request, UserRequest] {
 
-  def transform[A](request: Request[A]): Future[UserRequest[A]] = Future.successful {
-    val DAOs = Util.DAOs.get
-    val sessionTokenOpt = request.session.get("access_token")
-    val user = sessionTokenOpt
-      .flatMap(token => DAOs._2.getSession(token))
-      .filter(_.expires_in.isAfter(LocalDateTime.now(ZoneOffset.UTC)))
-      .map(_.username)
-      .flatMap(DAOs._1.getUser)
-    val validUser = user.getOrElse(throw AuthException())
-    if (!validUser.verified) throw NotVerifiedException()
-    val ip = request.headers.get(Conf.ipField).getOrElse(throw NotValidIP())
-    new UserRequest(validUser, ip, request)
-  }
+    def transform[A](request: Request[A]): Future[UserRequest[A]] = Future.successful {
+        if (Conf.discordConf.active) {
+            val DAOs = Util.DAOs.get
+            val sessionTokenOpt = request.session.get("access_token")
+            val user = sessionTokenOpt
+              .flatMap(token => DAOs._2.getSession(token))
+              .filter(_.expires_in.isAfter(LocalDateTime.now(ZoneOffset.UTC)))
+              .map(_.username)
+              .flatMap(DAOs._1.getUser)
+            val validUser = user.getOrElse(throw AuthException())
+            if (!validUser.verified) throw NotVerifiedException()
+            val ip = request.headers.get(Conf.ipField).getOrElse(throw NotValidIP())
+            new UserRequest(user, ip, request)
+        }
+        new UserRequest(Option.empty, "", request)
+    }
 }

@@ -41,21 +41,4 @@ class UserDAO @Inject() (protected val dbConfigProvider: DatabaseConfigProvider)
     Await.result(db.run(DBIO.seq(users += user)).map(_ => ()), Duration.Inf)
   }
 
-//  /**
-//   * whether address exists
-//   * @param address in ergo network
-//   * @return boolean result
-//   */
-//  def exists(address: String, type_tokens: String): Boolean = {
-//    val res = db.run(tokenPayments.filter(payment => payment.address === address && payment.type_tokens === type_tokens).exists.result)
-//    Await.result(res, 5.second)
-//  }
-
-//  /**
-//   * deletes all payments from db
-//   */
-//  def deleteAll(): Unit = {
-//    val res = db.run(tokenPayments.delete)
-//    Await.result(res, 5.second)
-//  }
 }

@@ -29,7 +29,7 @@ trait PaymentTokenComponent { self: HasDatabaseConfigProvider[JdbcProfile] =>
     def ip = column[String]("IP")
     def created_time = column[LocalDateTime]("CREATED_TIME", O.Default(LocalDateTime.now()))
     def done = column[Boolean]("DONE", O.Default(false))
-    def * = (username, address, erg_amount, type_tokens, ip, tx_id, created_time, done) <> (TokenPayment.tupled, TokenPayment.unapply)
+    def * = (username, address, erg_amount, type_tokens, ip.?, tx_id, created_time, done) <> (TokenPayment.tupled, TokenPayment.unapply)
     def user_token = index("USER_TOKEN", (username, type_tokens), unique = true)
   }
 
@@ -42,7 +42,7 @@ trait PaymentTokenComponent { self: HasDatabaseConfigProvider[JdbcProfile] =>
     def ip = column[String]("IP")
     def created_time = column[LocalDateTime]("CREATED_TIME")
     def done = column[Boolean]("DONE")
-    def * = (username, address, erg_amount, type_tokens, ip, tx_id, created_time, done) <> (TokenPayment.tupled, TokenPayment.unapply)
+    def * = (username, address, erg_amount, type_tokens, ip.?, tx_id, created_time, done) <> (TokenPayment.tupled, TokenPayment.unapply)
     def user_token = index("USER_TOKEN_ARCHIVE", (username, type_tokens, created_time), unique = true)
   }
 
@@ -91,12 +91,27 @@ class PaymentTokenDAO @Inject() (protected val dbConfigProvider: DatabaseConfigP
   /**
    * whether payment with username exists or not
    * @param username in Discord
+   * @param address
+   * @param ip
    * @param type_tokens Type batch of assets
    * @return boolean result
    */
   def exists(username: String, address: String, ip: String, type_tokens: String): Boolean = {
     val res = db.run(tokenPayments.filter(payment => {
       (payment.address === address || payment.username === username || payment.ip === ip) && (payment.type_tokens === type_tokens)
+    } ).exists.result)
+    Await.result(res, Duration.Inf)
+  }
+
+  /**
+   * whether payment with username exists or not
+   * @param address wallet address
+   * @param type_tokens Type batch of assets
+   * @return boolean result
+   */
+  def exists(address: String, type_tokens: String): Boolean = {
+    val res = db.run(tokenPayments.filter(payment => {
+      payment.address === address && payment.type_tokens === type_tokens
     } ).exists.result)
     Await.result(res, Duration.Inf)
   }
